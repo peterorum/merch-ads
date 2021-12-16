@@ -1,3 +1,4 @@
+const { log } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
 
@@ -13,6 +14,5 @@ const data = fs
   .toString()
   .split("\n");
 
-console.log(data);
 
-
+  
