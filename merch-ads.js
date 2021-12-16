@@ -116,36 +116,34 @@ const createDb = (data) => {
 // lower auto bids
 
 const lowerAutoBids = (db, bid) => {
+  // find all auto campaigns
   const autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
 
+  // set maxBid to new bid if smaller
+
   autoCampaigns.forEach((c) => {
-    // set maxBid to max 0.20
     c.adGroups.forEach((ag) => {
       ag.maxBid = Math.min(ag.maxBid, bid);
     });
   });
-
-  // console.log(autoCampaigns.find(c => c.campaign === 'Write 20 A'));
 
   return autoCampaigns;
 };
 
 //--------- dump as text for Excel
 
-const outputRecord = (d) => 
-{
-      // prettier-ignore
-      const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid.toString()}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t`
+const outputRecord = (d) => {
+  // prettier-ignore
+  const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid.toString()}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t`
 
-      console.log(s);
-  
-}
+  console.log(s);
+};
 const outputAdGroups = (db) => {
-  outputRecord(headings)
+  outputRecord(headings);
 
   db.forEach((d) => {
     d.adGroups.forEach((ag) => {
-      outputRecord(ag)
+      outputRecord(ag);
     });
   });
 };
