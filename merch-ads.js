@@ -2,11 +2,6 @@ const { log } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
 
-// if (!argv[2]) {
-//   console.log("Missing command");
-//   exit(1);
-// }
-
 // tab-separated file
 const dataFile = "data/data.txt";
 
@@ -105,12 +100,13 @@ const createDb = (data) => {
   const campaigns = data.filter((d) => d.recordType === "Campaign");
 
   // add Ad Groups under campaigns
+  // TODO: don't do this - keep flat
 
-  campaigns.forEach((c) => {
-    c.adGroups = data.filter(
-      (d) => d.campaign === c.campaign && d.recordType == "Ad Group"
-    );
-  });
+  // campaigns.forEach((c) => {
+  //   c.adGroups = data.filter(
+  //     (d) => d.campaign === c.campaign && d.recordType == "Ad Group"
+  //   );
+  // });
 
   return campaigns;
 };
@@ -118,6 +114,9 @@ const createDb = (data) => {
 // lower auto bids
 
 const lowerAutoBids = (db, bid) => {
+  console.log("TODO: Treat as flat");
+  exit(1);
+
   // find all auto campaigns
   const autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
 
@@ -140,21 +139,99 @@ const outputRecord = (d) => {
 
   console.log(s);
 };
-const outputAdGroups = (db) => {
+const outputRecords = (db) => {
   outputRecord(headings);
 
+  // db.forEach((d) => {
+  //   d.adGroups.forEach((ag) => {
+  //     outputRecord(ag);
+  //   });
+  // });
+
   db.forEach((d) => {
-    d.adGroups.forEach((ag) => {
-      outputRecord(ag);
-    });
+    outputRecord(d);
   });
 };
+
+//--------- add negative keywords
+
+const addNegativeKeywords = (data, wordFile) => {
+  const campaigns = data.filter((d) => d.recordType === "Campaign");
+  const autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
+
+  const words = fs.readFileSync(wordFile).toString().split("\n");
+
+  // for each campaign, create a negative record
+
+  let negativeRecords = [];
+
+  autoCampaigns.forEach((campaign) => {
+    words.forEach((word) => {
+      // 216734630767212	Keyword	66707686599553	Astronomy All Stars A								astronomy shirts for men		campaign negative exact		enabled		enabled	0	0	0.00	0	0	0.00	0.00%
+
+      const keywordRecord = {
+        recordId: "",
+        recordType: "Keyword",
+        campaignId: campaign.campaignId,
+        campaign: campaign.campaign,
+        campaignDailyBudget: "",
+        portfolioId: "",
+        campaignStartDate: "",
+        campaignEndDate: "",
+        campaignTargetingType: "",
+        adGroup: "",
+        maxBid: "",
+        keywordOrProductTargeting: word,
+        productTargetingId: "",
+        matchType: "campaign negative exact",
+        asin: "",
+        campaignStatus: "enabled",
+        adGroupStatus: "",
+        status: "enabled",
+        impressions: 0,
+        clicks: 0,
+        spend: 0,
+        orders: 0,
+        totalUnits: 0,
+        sales: 0,
+        acos: "0%",
+        biddingStrategy: "",
+        placementType: "",
+        increaseBidsByPlacement: "",
+      };
+
+      negativeRecords = [...negativeRecords, keywordRecord];
+    });
+  });
+
+  return negativeRecords;
+};
+
 //---------
 
 const data = loadData();
 
 const db = createDb(data);
 
-const db2 = lowerAutoBids(db, 0.2);
+switch (argv[2]) {
+  case "--auto-bid": {
+    const db2 = lowerAutoBids(db, 0.2);
 
-outputAdGroups(db2);
+    outputRecords(db2);
+
+    break;
+  }
+
+  case "--neg": {
+    const db2 = addNegativeKeywords(data, "data/negative.txt");
+
+    outputRecords(db2);
+
+    break;
+  }
+
+  default: {
+    console.log("--neg\t\tAdd negative keywords");
+    console.log("--auto-bid\tSet bid for auto campaigns");
+  }
+}
