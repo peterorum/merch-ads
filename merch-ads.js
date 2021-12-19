@@ -5,8 +5,6 @@ const { exit, argv } = require("process");
 // tab-separated file
 const dataFile = "data/data.txt";
 
-let headings = "";
-
 // load data exported from Excel as a tsv
 
 const loadData = () => {
@@ -78,9 +76,9 @@ const loadData = () => {
       };
     });
 
-  const [headings1, ...data1] = data;
+  const [headings, ...data1] = data;
 
-  headings = headings1; // global
+  outputRecord(headings);
 
   // convert numeric fields
   const data2 = data1.map((d) => {
@@ -140,7 +138,6 @@ const outputRecord = (d) => {
   console.log(s);
 };
 const outputRecords = (db) => {
-  outputRecord(headings);
 
   // db.forEach((d) => {
   //   d.adGroups.forEach((ag) => {
@@ -155,9 +152,13 @@ const outputRecords = (db) => {
 
 //--------- add negative keywords
 
-const addNegativeKeywords = (data, wordFile) => {
+const addNegativeKeywords = (data, niche,  wordFile) => {
   const campaigns = data.filter((d) => d.recordType === "Campaign");
-  const autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
+  let autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
+
+  if (niche) {
+    autoCampaigns = autoCampaigns.filter(c => c.campaign.startsWith(niche));
+  }
 
   const words = fs.readFileSync(wordFile).toString().split("\n");
 
@@ -167,8 +168,6 @@ const addNegativeKeywords = (data, wordFile) => {
 
   autoCampaigns.forEach((campaign) => {
     words.forEach((word) => {
-      // 216734630767212	Keyword	66707686599553	Astronomy All Stars A								astronomy shirts for men		campaign negative exact		enabled		enabled	0	0	0.00	0	0	0.00	0.00%
-
       const keywordRecord = {
         recordId: "",
         recordType: "Keyword",
@@ -204,7 +203,8 @@ const addNegativeKeywords = (data, wordFile) => {
     });
   });
 
-  return negativeRecords;
+  outputRecords(negativeRecords);
+
 };
 
 //---------
@@ -223,9 +223,14 @@ switch (argv[2]) {
   }
 
   case "--neg": {
-    const db2 = addNegativeKeywords(data, "data/negative.txt");
+    // addNegativeKeywords(data, "", "data/negative/all.txt");
 
-    outputRecords(db2);
+    const niches = ["Bridge", "Cats", "Karate", "Pizza", "Art Sketch", "Vego", "Write"];
+
+    niches.forEach(niche => {
+      addNegativeKeywords(data, niche, `data/negative/${niche.toLowerCase()}.txt`);
+    })
+    
 
     break;
   }
