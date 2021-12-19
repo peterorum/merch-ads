@@ -160,6 +160,10 @@ const addNegativeKeywords = (data, niche,  wordFile) => {
     autoCampaigns = autoCampaigns.filter(c => c.campaign.startsWith(niche));
   }
 
+  if (!autoCampaigns.length) {
+    console.log(`No campaigns found for ${niche}`);
+    exit(1);
+  }
   const words = fs.readFileSync(wordFile).toString().split("\n");
 
   // for each campaign, create a negative record
@@ -225,7 +229,11 @@ switch (argv[2]) {
   case "--neg": {
     // addNegativeKeywords(data, "", "data/negative/all.txt");
 
-    const niches = ["Bridge", "Cats", "Karate", "Pizza", "Art Sketch", "Vego", "Write"];
+    const niches = [
+      // "Bridge", "Cats", 
+      "Martial Karate", 
+      // "Pizza", "Art Sketch", "Vego", "Write"
+    ];
 
     niches.forEach(niche => {
       addNegativeKeywords(data, niche, `data/negative/${niche.toLowerCase()}.txt`);
