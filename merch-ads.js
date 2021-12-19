@@ -231,7 +231,8 @@ switch (argv[2]) {
 
     const niches = [
       // "Bridge", "Cats", 
-      "Martial Karate", 
+      // "Martial Karate", 
+      "Psychology", 
       // "Pizza", "Art Sketch", "Vego", "Write"
     ];
 
