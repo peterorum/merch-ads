@@ -292,7 +292,11 @@ const createManualCampaign = (name, portfolioId) => {
 
 const createTestCampaigns = (data) => {
   const campaigns = data.filter((d) => d.recordType === "Campaign");
-  let manualCampaigns = db.filter((d) => d.campaignTargetingType === "Manual");
+  let manualCampaigns = campaigns.filter(
+    (d) => d.campaignTargetingType === "Manual"
+  );
+
+  const generalNegatives = fs.readFileSync('data/negative/all.txt').toString().split("\n");
 
   // for each campaign, create a broad campaign from its negative keywords
 
@@ -304,8 +308,10 @@ const createTestCampaigns = (data) => {
     );
 
     if (keywords.length) {
+      const testCampaignName = campaign.campaign.replace(/M$/, "T");
+
       let newCampaign = createManualCampaign(
-        campaign.campaign.replace(/M$/, "T"),
+        testCampaignName,
         campaign.portfolioId
       );
 
@@ -313,7 +319,7 @@ const createTestCampaigns = (data) => {
       newCampaign.push({
         ...blank,
         recordType: "Ad Group",
-        campaign: campaign.campaign,
+        campaign: testCampaignName,
         adGroup: "Broad",
         maxBid: "0.20",
         campaignStatus: "enabled",
@@ -322,8 +328,6 @@ const createTestCampaigns = (data) => {
 
       // ad
 
-      console.log(campaign.campaignId);
-
       const asin = data.find(
         (c) => c.campaignId === campaign.campaignId && c.recordType === "Ad"
       ).asin;
@@ -331,7 +335,7 @@ const createTestCampaigns = (data) => {
       newCampaign.push({
         ...blank,
         recordType: "Ad",
-        campaign: campaign.campaign,
+        campaign: testCampaignName,
         adGroup: "Broad",
         asin,
         campaignStatus: "enabled",
@@ -347,10 +351,11 @@ const createTestCampaigns = (data) => {
           {
             ...blank,
             recordType: "Keyword",
-            campaign: campaign.campaign,
+            campaign: testCampaignName,
             keywordOrProductTargeting: k.keywordOrProductTargeting,
             matchType: "broad",
             campaignStatus: "enabled",
+            adGroupStatus: "enabled",
             status: "enabled",
           },
         ];
@@ -362,14 +367,33 @@ const createTestCampaigns = (data) => {
           {
             ...blank,
             recordType: "Keyword",
-            campaign: campaign.campaign,
+            campaign: testCampaignName,
             keywordOrProductTargeting: k.keywordOrProductTargeting,
             matchType: "campaign negative exact",
             campaignStatus: "enabled",
             status: "enabled",
           },
         ];
+
+        // add general negatives
+
+        generalNegatives.forEach((neg) => {
+          newCampaign = [
+            ...newCampaign,
+            {
+              ...blank,
+              recordType: "Keyword",
+              campaign: testCampaignName,
+              keywordOrProductTargeting: neg,
+              matchType: "campaign negative exact",
+              campaignStatus: "enabled",
+              status: "enabled",
+            },
+          ];
+        });
       });
+
+      // add to all new campaigns
 
       newCampaigns = [...newCampaigns, ...newCampaign];
 
@@ -383,42 +407,39 @@ const createTestCampaigns = (data) => {
         );
 
         if (!autoCampaign) {
-          console.error(`No auto campaign found for ${campaign.campaign}`)
-          exit(1)
+          console.error(`No auto campaign found for ${campaign.campaign}`);
+          exit(1);
         }
 
-        newCampaigns.push(
-          {
-            ...blank,
-            recordType: "Keyword",
-            campaignId: autoCampaign.campaignId,
-            campaign: autoCampaign.campaign,
-            keywordOrProductTargeting: k.keywordOrProductTargeting,
-            matchType: "campaign negative exact",
-            campaignStatus: "enabled",
-            status: "enabled",
-          },
-        );
+        // todo: limit exact to 10 words
 
-        newCampaigns.push(
-          {
-            ...blank,
-            recordType: "Keyword",
-            campaignId: autoCampaign.campaignId,
-            campaign: autoCampaign.campaign,
-            keywordOrProductTargeting: k.keywordOrProductTargeting,
-            matchType: "campaign negative phrase",
-            campaignStatus: "enabled",
-            status: "enabled",
-          },
-        );
+        newCampaigns.push({
+          ...blank,
+          recordType: "Keyword",
+          campaignId: autoCampaign.campaignId,
+          campaign: autoCampaign.campaign,
+          keywordOrProductTargeting: k.keywordOrProductTargeting,
+          matchType: "campaign negative exact",
+          campaignStatus: "enabled",
+          status: "enabled",
+        });
 
+        // todo: limit broad to 4 words
+        newCampaigns.push({
+          ...blank,
+          recordType: "Keyword",
+          campaignId: autoCampaign.campaignId,
+          campaign: autoCampaign.campaign,
+          keywordOrProductTargeting: k.keywordOrProductTargeting,
+          matchType: "campaign negative phrase",
+          campaignStatus: "enabled",
+          status: "enabled",
+        });
       });
     }
   });
 
-  console.log(newCampaigns);
-  // outputRecords(negativeRecords);
+  outputRecords(newCampaigns);
 };
 
 //---------
