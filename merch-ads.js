@@ -531,7 +531,7 @@ const createTestCampaigns = (data) => {
 const createNewKeywordCampaign = ({
   newCampaignName,
   autoCampaign,
-  matchType,
+  adGroup, // Broad or Exact
   asin,
   generalNegatives,
   customerSearchTerm,
@@ -547,7 +547,7 @@ const createNewKeywordCampaign = ({
     ...blank,
     recordType: "Ad Group",
     campaign: newCampaignName,
-    adGroup: matchType, // use match type as ad group name
+    adGroup,
     maxBid: bid,
     campaignStatus: "enabled",
     adGroupStatus: "enabled",
@@ -558,7 +558,7 @@ const createNewKeywordCampaign = ({
     ...blank,
     recordType: "Ad",
     campaign: newCampaignName,
-    adGroup: matchType,
+    adGroup,
     asin,
     campaignStatus: "enabled",
     adGroupStatus: "enabled",
@@ -573,7 +573,7 @@ const createNewKeywordCampaign = ({
       recordType: "Keyword",
       campaign: newCampaignName,
       keywordOrProductTargeting: customerSearchTerm,
-      matchType,
+      matchType: adGroup.toLowerCase(),
       campaignStatus: "enabled",
       adGroupStatus: "enabled",
       status: "enabled",
@@ -587,10 +587,11 @@ const createNewKeywordCampaign = ({
     {
       ...blank,
       recordType: "Keyword",
+      campaignId: autoCampaign.campaignId,
       campaign: autoCampaign.campaign,
       keywordOrProductTargeting: customerSearchTerm,
       matchType:
-        matchType === "Exact"
+        adGroup === "Exact"
           ? "campaign negative exact"
           : "campaign negative phrase",
       campaignStatus: "enabled",
@@ -600,7 +601,7 @@ const createNewKeywordCampaign = ({
 
   // if adding as broad, then add as neg exact to the broad campaign
 
-  if (matchType === "Broad") {
+  if (adGroup === "Broad") {
     newCampaign = [
       ...newCampaign,
       {
@@ -695,7 +696,7 @@ const createPromotionCampaigns = (data, sales) => {
       const testCampaign = createNewKeywordCampaign({
         newCampaignName: baseCampaignName + " Test",
         autoCampaign,
-        matchType: "Broad",
+        adGroup: "Broad",
         asin,
         generalNegatives,
         customerSearchTerm: co.customerSearchTerm,
@@ -717,7 +718,7 @@ const createPromotionCampaigns = (data, sales) => {
       const perfCampaign = createNewKeywordCampaign({
         newCampaignName: baseCampaignName + " Perf",
         autoCampaign,
-        matchType: "Exact",
+        adGroup: "Exact",
         asin,
         generalNegatives,
         customerSearchTerm: co.customerSearchTerm,
