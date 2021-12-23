@@ -139,9 +139,8 @@ const loadSales = () => {
     .map((d) => d.split("\t"))
     .map((d) => {
       const [
-        endDate,
-        startDate,
-        portfolioname,
+        date,
+        portfolioName,
         currency,
         campaignName,
         adGroupName,
@@ -153,22 +152,21 @@ const loadSales = () => {
         clickThruRate,
         costPerClick,
         spend,
-        d14DayTotalSales,
+        day14TotalSales,
         acos,
         roas,
-        orders, // d14DayTotalOrders
-        d14DayTotalUnits,
-        d14DayConversionRate,
-        d14DayAdvertisedASINUnits,
-        d14DayBrandHaloASINUnits,
-        d14DayAdvertisedASINSales,
-        d14DayBrandHaloASINSales,
+        orders,
+        day14TotalUnits,
+        day14ConversionRate,
+        day14AdvertisedASINUnits,
+        day14BrandHaloASINUnits,
+        day14AdvertisedASINSales,
+        day14BrandHaloASINSales,
       ] = d;
 
       return {
-        endDate,
-        startDate,
-        portfolioname,
+        date,
+        portfolioName,
         currency,
         campaignName,
         adGroupName,
@@ -180,16 +178,16 @@ const loadSales = () => {
         clickThruRate,
         costPerClick,
         spend,
-        orders,
+        day14TotalSales,
         acos,
         roas,
         orders,
-        d14DayTotalUnits,
-        d14DayConversionRate,
-        d14DayAdvertisedASINUnits,
-        d14DayBrandHaloASINUnits,
-        d14DayAdvertisedASINSales,
-        d14DayBrandHaloASINSales,
+        day14TotalUnits,
+        day14ConversionRate,
+        day14AdvertisedASINUnits,
+        day14BrandHaloASINUnits,
+        day14AdvertisedASINSales,
+        day14BrandHaloASINSales,
       };
     });
 
@@ -536,7 +534,8 @@ const createNewKeywordCampaign = ({
   matchType,
   asin,
   generalNegatives,
-  customerSearchTerm
+  customerSearchTerm,
+  bid,
 }) => {
   let newCampaign = createManualCampaign(
     newCampaignName,
@@ -549,7 +548,7 @@ const createNewKeywordCampaign = ({
     recordType: "Ad Group",
     campaign: newCampaignName,
     adGroup: matchType, // use match type as ad group name
-    maxBid: "0.20",
+    maxBid: bid,
     campaignStatus: "enabled",
     adGroupStatus: "enabled",
   });
@@ -566,6 +565,21 @@ const createNewKeywordCampaign = ({
     status: "enabled",
   });
 
+  // add keyword
+  newCampaign = [
+    ...newCampaign,
+    {
+      ...blank,
+      recordType: "Keyword",
+      campaign: newCampaignName,
+      keywordOrProductTargeting: customerSearchTerm,
+      matchType,
+      campaignStatus: "enabled",
+      adGroupStatus: "enabled",
+      status: "enabled",
+    },
+  ];
+
   // add exact or phrase for auto campaign
 
   newCampaign = [
@@ -575,11 +589,31 @@ const createNewKeywordCampaign = ({
       recordType: "Keyword",
       campaign: autoCampaign.campaign,
       keywordOrProductTargeting: customerSearchTerm,
-      matchType: matchType === "Exact" ? "campaign negative exact" : "campaign negative phrase",
+      matchType:
+        matchType === "Exact"
+          ? "campaign negative exact"
+          : "campaign negative phrase",
       campaignStatus: "enabled",
       status: "enabled",
     },
   ];
+
+  // if adding as broad, then add as neg exact to the broad campaign
+
+  if (matchType === "Broad") {
+    newCampaign = [
+      ...newCampaign,
+      {
+        ...blank,
+        recordType: "Keyword",
+        campaign: newCampaignName,
+        keywordOrProductTargeting: customerSearchTerm,
+        matchType: "campaign negative exact",
+        campaignStatus: "enabled",
+        status: "enabled",
+      },
+    ];
+  }
 
   // add general negatives
 
@@ -664,10 +698,15 @@ const createPromotionCampaigns = (data, sales) => {
         matchType: "Broad",
         asin,
         generalNegatives,
-        customerSearchTerm: co.customerSearchTerm
+        customerSearchTerm: co.customerSearchTerm,
+        bid: "0.2",
       });
 
       newCampaigns = [...newCampaigns, ...testCampaign];
+    } else {
+      // existing test found
+      // if keyword not found, add it
+      // console.log("--------------found", co.campaignName);
     }
 
     //--- check for existing Perf campaign
@@ -681,6 +720,8 @@ const createPromotionCampaigns = (data, sales) => {
         matchType: "Exact",
         asin,
         generalNegatives,
+        customerSearchTerm: co.customerSearchTerm,
+        bid: "0.4",
       });
 
       newCampaigns = [...newCampaigns, ...perfCampaign];
