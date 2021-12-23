@@ -2,8 +2,9 @@ const { log } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
 
-// tab-separated file
+// tab-separated files
 const dataFile = "data/data.txt";
+const salesFile = "data/sales.txt";
 
 // for ease of create a new record using spread operator
 
@@ -122,6 +123,82 @@ const loadData = () => {
   });
 
   return data2;
+};
+
+// sales term summary report
+const loadSales = () => {
+  const salesText = fs.readFileSync(salesFile).toString().split("\r\n");
+
+  const sales1 = salesText
+    .map((d) => d.split("\t"))
+    .map((d) => {
+      const [
+        endDate,
+        startDate,
+        portfolioname,
+        currency,
+        campaignName,
+        adGroupName,
+        targeting,
+        matchType,
+        customerSearchTerm,
+        impressions,
+        clicks,
+        clickThruRate,
+        costPerClick,
+        spend,
+        d14DayTotalSales,
+        acos,
+        roas,
+        orders, // d14DayTotalOrders
+        d14DayTotalUnits,
+        d14DayConversionRate,
+        d14DayAdvertisedASINUnits,
+        d14DayBrandHaloASINUnits,
+        d14DayAdvertisedASINSales,
+        d14DayBrandHaloASINSales,
+      ] = d;
+
+      return {
+        endDate,
+        startDate,
+        portfolioname,
+        currency,
+        campaignName,
+        adGroupName,
+        targeting,
+        matchType,
+        customerSearchTerm,
+        impressions,
+        clicks,
+        clickThruRate,
+        costPerClick,
+        spend,
+        orders,
+        acos,
+        roas,
+        orders,
+        d14DayTotalUnits,
+        d14DayConversionRate,
+        d14DayAdvertisedASINUnits,
+        d14DayBrandHaloASINUnits,
+        d14DayAdvertisedASINSales,
+        d14DayBrandHaloASINSales,
+      };
+    });
+
+  // convert relevant specific numeric fields
+  const sales2 = sales1.map((d) => {
+    return {
+      ...d,
+      orders: d.orders ? parseFloat(d.orders) : d.orders,
+    };
+  });
+
+  console.log(sales2);
+  exit();
+
+  return sales2;
 };
 
 // create database array indexed by campaign name
@@ -296,7 +373,10 @@ const createTestCampaigns = (data) => {
     (d) => d.campaignTargetingType === "Manual"
   );
 
-  const generalNegatives = fs.readFileSync('data/negative/all.txt').toString().split("\n");
+  const generalNegatives = fs
+    .readFileSync("data/negative/all.txt")
+    .toString()
+    .split("\n");
 
   // for each campaign, create a broad campaign from its negative keywords
 
@@ -486,9 +566,22 @@ switch (argv[2]) {
     break;
   }
 
+  // create test & performance campaigns from auto sales
+
+  case "--promote": {
+    const sales = loadSales();
+
+    createPromotionCampaigns(data, sales);
+
+    break;
+  }
+
   default: {
     console.log("--auto-bid\tSet bid for auto campaigns");
     console.log("--neg\t\tAdd negative keywords");
     console.log("--tests\t\tCreate broad test campaigns");
+    console.log(
+      "--promote\t\tCreate test & performance campaigns from auto sales"
+    );
   }
 }
