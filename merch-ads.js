@@ -125,6 +125,12 @@ const loadData = () => {
   return data2;
 };
 
+// debug log & exit
+const dump = (s) => {
+  console.log(s);
+  exit(0);
+};
+
 // sales term summary report
 const loadSales = () => {
   const salesText = fs.readFileSync(salesFile).toString().split("\r\n");
@@ -522,6 +528,45 @@ const createTestCampaigns = (data) => {
   outputRecords(newCampaigns);
 };
 
+//--------- create a new test or perf campaign
+
+const createNewKeywordCampaign = ({
+  newCampaignName,
+  autoCampaign,
+  matchType,
+  asin,
+}) => {
+  let newCampaign = createManualCampaign(
+    newCampaignName,
+    autoCampaign.portfolioId
+  );
+
+  // add adgroup
+  newCampaign.push({
+    ...blank,
+    recordType: "Ad Group",
+    campaign: newCampaignName,
+    adGroup: matchType, // use match type as ad group name
+    maxBid: "0.20",
+    campaignStatus: "enabled",
+    adGroupStatus: "enabled",
+  });
+
+  // add ad
+  newCampaign.push({
+    ...blank,
+    recordType: "Ad",
+    campaign: newCampaignName,
+    adGroup: matchType,
+    asin,
+    campaignStatus: "enabled",
+    adGroupStatus: "enabled",
+    status: "enabled",
+  });
+
+  return newCampaign;
+};
+
 //--------- create test & performance campaigns from sales in auto
 
 // 1. Search for orders in Auto camaigns, on a keyword.
@@ -552,82 +597,42 @@ const createPromotionCampaigns = (data, sales) => {
   // NB: in sales report data, campain name is campaignName
   // but in Ad data, it's just campaign
 
-  campaignsWithOrders = campaignsWithOrders.filter((co) =>
+  const autoCampaignsWithOrders = campaignsWithOrders.filter((co) =>
     autoCampaigns.find(
       (ac) => ac.campaign === co.campaignName && ac.campaignStatus === "enabled"
     )
   );
 
-  console.log(
-    campaignsWithOrders.map((c) => [
-      c.campaignName,
-      c.orders,
-      c.customerSearchTerm,
-    ])
-  );
-
-  // why not cats periodic
-
-  exit(0)
-
   // for each keyword, create a test & perf campaign if nec
 
-  campaignsWithOrders.forEach((co) => {
-    if (
-      !allCampaigns.find(
-        (c) =>
-          c.campaign === co.campaignName + "T" ||
-          c.campaign === co.campaignName + "Test"
-      )
-    ) {
+  autoCampaignsWithOrders.forEach((co) => {
+    //--- check for existing Test campaign
 
-      const testCampaignName = co.campaignName.replace(/(Auto)|(M)$/, "Test");
+    const autoCampaign = allCampaigns.find(
+      (c) => c.campaign === co.campaignName
+    );
 
-      let newCampaign = createManualCampaign(
-        testCampaignName,
-        co.portfolioId
-      );
+    const baseCampaignName = co.campaignName.replace(/( Auto)|( A)$/, "");
 
-      // adgroup
-      newCampaign.push({
-        ...blank,
-        recordType: "Ad Group",
-        campaign: testCampaignName,
-        adGroup: "Broad",
-        maxBid: "0.20",
-        campaignStatus: "enabled",
-        adGroupStatus: "enabled",
-      });
+    const asin = data.find(
+      (c) => c.campaign === co.campaignName && c.recordType === "Ad"
+    ).asin;
 
-      // ad
+    const testRegex = new RegExp(`^${baseCampaignName} (T|Test)$`);
 
-      const asin = data.find(
-        (c) => c.campaignId === campaign.campaignId && c.recordType === "Ad"
-      ).asin;
+    // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
+    // assumes single asin campaigns
 
-      newCampaign.push({
-        ...blank,
-        recordType: "Ad",
-        campaign: testCampaignName,
-        adGroup: "Broad",
+    if (!allCampaigns.find((c) => testRegex.test(c.campaign))) {
+      const testCampaign = createNewKeywordCampaign({
+        newCampaignName: baseCampaignName + " Test",
+        autoCampaign,
+        matchType: "Broad",
         asin,
-        campaignStatus: "enabled",
-        adGroupStatus: "enabled",
-        status: "enabled",
       });
-
-
-
-
-
-
-
-
-
+      newCampaigns = [...newCampaigns, ...testCampaign];
     }
   });
-
-  exit();
 
   outputRecords(newCampaigns);
 };
