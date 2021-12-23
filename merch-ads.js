@@ -129,7 +129,7 @@ const loadData = () => {
 const loadSales = () => {
   const salesText = fs.readFileSync(salesFile).toString().split("\r\n");
 
-  const sales1 = salesText
+  const sales = salesText
     .map((d) => d.split("\t"))
     .map((d) => {
       const [
@@ -187,6 +187,9 @@ const loadSales = () => {
       };
     });
 
+  // skip headings
+  const [, ...sales1] = sales;
+
   // convert relevant specific numeric fields
   const sales2 = sales1.map((d) => {
     return {
@@ -194,9 +197,6 @@ const loadSales = () => {
       orders: d.orders ? parseFloat(d.orders) : d.orders,
     };
   });
-
-  console.log(sales2);
-  exit();
 
   return sales2;
 };
@@ -518,6 +518,116 @@ const createTestCampaigns = (data) => {
       });
     }
   });
+
+  outputRecords(newCampaigns);
+};
+
+//--------- create test & performance campaigns from sales in auto
+
+// 1. Search for orders in Auto camaigns, on a keyword.
+// 2. Create Test & Perf campaigns if nec., with Broad and Exact ad groups.
+// 3. Add the Term as a neg phrase and neg exact to the Auto
+// 4. Add as Broad to Test, and neg exact. 0.2
+// 5. Add as exact to Perf. 0.4
+
+const createPromotionCampaigns = (data, sales) => {
+  const allCampaigns = data.filter((d) => d.recordType === "Campaign");
+
+  const autoCampaigns = allCampaigns.filter(
+    (d) => d.campaignTargetingType === "Auto"
+  );
+
+  const generalNegatives = fs
+    .readFileSync("data/negative/all.txt")
+    .toString()
+    .split("\n");
+
+  let campaignsWithOrders = sales.filter(
+    (s) => s.orders > 0 && !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm)
+  );
+
+  let newCampaigns = [];
+
+  // find enabled campaigns
+  // NB: in sales report data, campain name is campaignName
+  // but in Ad data, it's just campaign
+
+  campaignsWithOrders = campaignsWithOrders.filter((co) =>
+    autoCampaigns.find(
+      (ac) => ac.campaign === co.campaignName && ac.campaignStatus === "enabled"
+    )
+  );
+
+  console.log(
+    campaignsWithOrders.map((c) => [
+      c.campaignName,
+      c.orders,
+      c.customerSearchTerm,
+    ])
+  );
+
+  // why not cats periodic
+
+  exit(0)
+
+  // for each keyword, create a test & perf campaign if nec
+
+  campaignsWithOrders.forEach((co) => {
+    if (
+      !allCampaigns.find(
+        (c) =>
+          c.campaign === co.campaignName + "T" ||
+          c.campaign === co.campaignName + "Test"
+      )
+    ) {
+
+      const testCampaignName = co.campaignName.replace(/(Auto)|(M)$/, "Test");
+
+      let newCampaign = createManualCampaign(
+        testCampaignName,
+        co.portfolioId
+      );
+
+      // adgroup
+      newCampaign.push({
+        ...blank,
+        recordType: "Ad Group",
+        campaign: testCampaignName,
+        adGroup: "Broad",
+        maxBid: "0.20",
+        campaignStatus: "enabled",
+        adGroupStatus: "enabled",
+      });
+
+      // ad
+
+      const asin = data.find(
+        (c) => c.campaignId === campaign.campaignId && c.recordType === "Ad"
+      ).asin;
+
+      newCampaign.push({
+        ...blank,
+        recordType: "Ad",
+        campaign: testCampaignName,
+        adGroup: "Broad",
+        asin,
+        campaignStatus: "enabled",
+        adGroupStatus: "enabled",
+        status: "enabled",
+      });
+
+
+
+
+
+
+
+
+
+    }
+  });
+
+  exit();
 
   outputRecords(newCampaigns);
 };
