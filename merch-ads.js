@@ -535,6 +535,8 @@ const createNewKeywordCampaign = ({
   autoCampaign,
   matchType,
   asin,
+  generalNegatives,
+  customerSearchTerm
 }) => {
   let newCampaign = createManualCampaign(
     newCampaignName,
@@ -562,6 +564,38 @@ const createNewKeywordCampaign = ({
     campaignStatus: "enabled",
     adGroupStatus: "enabled",
     status: "enabled",
+  });
+
+  // add exact or phrase for auto campaign
+
+  newCampaign = [
+    ...newCampaign,
+    {
+      ...blank,
+      recordType: "Keyword",
+      campaign: autoCampaign.campaign,
+      keywordOrProductTargeting: customerSearchTerm,
+      matchType: matchType === "Exact" ? "campaign negative exact" : "campaign negative phrase",
+      campaignStatus: "enabled",
+      status: "enabled",
+    },
+  ];
+
+  // add general negatives
+
+  generalNegatives.forEach((neg) => {
+    newCampaign = [
+      ...newCampaign,
+      {
+        ...blank,
+        recordType: "Keyword",
+        campaign: newCampaignName,
+        keywordOrProductTargeting: neg,
+        matchType: "campaign negative exact",
+        campaignStatus: "enabled",
+        status: "enabled",
+      },
+    ];
   });
 
   return newCampaign;
@@ -606,22 +640,22 @@ const createPromotionCampaigns = (data, sales) => {
   // for each keyword, create a test & perf campaign if nec
 
   autoCampaignsWithOrders.forEach((co) => {
-    //--- check for existing Test campaign
-
     const autoCampaign = allCampaigns.find(
       (c) => c.campaign === co.campaignName
     );
 
     const baseCampaignName = co.campaignName.replace(/( Auto)|( A)$/, "");
 
+    // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
+    // assumes single asin campaigns
+
     const asin = data.find(
       (c) => c.campaign === co.campaignName && c.recordType === "Ad"
     ).asin;
 
-    const testRegex = new RegExp(`^${baseCampaignName} (T|Test)$`);
+    //--- check for existing Test campaign
 
-    // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
-    // assumes single asin campaigns
+    const testRegex = new RegExp(`^${baseCampaignName} (T|Test)$`);
 
     if (!allCampaigns.find((c) => testRegex.test(c.campaign))) {
       const testCampaign = createNewKeywordCampaign({
@@ -629,8 +663,27 @@ const createPromotionCampaigns = (data, sales) => {
         autoCampaign,
         matchType: "Broad",
         asin,
+        generalNegatives,
+        customerSearchTerm: co.customerSearchTerm
       });
+
       newCampaigns = [...newCampaigns, ...testCampaign];
+    }
+
+    //--- check for existing Perf campaign
+
+    const perfRegex = new RegExp(`^${baseCampaignName} (M||K|Perf)$`);
+
+    if (!allCampaigns.find((c) => perfRegex.test(c.campaign))) {
+      const perfCampaign = createNewKeywordCampaign({
+        newCampaignName: baseCampaignName + " Perf",
+        autoCampaign,
+        matchType: "Exact",
+        asin,
+        generalNegatives,
+      });
+
+      newCampaigns = [...newCampaigns, ...perfCampaign];
     }
   });
 
