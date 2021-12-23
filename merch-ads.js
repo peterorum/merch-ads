@@ -572,6 +572,7 @@ const createNewKeywordCampaign = ({
       ...blank,
       recordType: "Keyword",
       campaign: newCampaignName,
+      adGroup,
       keywordOrProductTargeting: customerSearchTerm,
       matchType: adGroup.toLowerCase(),
       campaignStatus: "enabled",
