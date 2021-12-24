@@ -6,6 +6,8 @@ const { exit, argv } = require("process");
 const dataFile = "data/data.txt";
 const salesFile = "data/sales.txt";
 
+const  missingAsins = require("./data/missing-asins.json")
+
 // for ease of create a new record using spread operator
 
 const blank = {
@@ -705,9 +707,20 @@ const createPromotionCampaigns = (data, sales) => {
     // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
     // assumes single asin campaigns
 
-    const asin = data.find(
+    let asin = data.find(
       (c) => c.campaign === co.campaignName && c.recordType === "Ad"
     ).asin;
+
+    if (!asin ){
+      asin = missingAsins[co.campaignName]
+    }
+
+    if (!asin) {
+      // asin missing from Ad in bulk download for unknown reason
+      console.log('No asin for', co.campaignName);
+      console.log("add to data/missing-asins.json");
+      exit()
+    }
 
     //--- check for existing Test campaign
 
