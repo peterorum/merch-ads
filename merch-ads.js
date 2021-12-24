@@ -369,6 +369,60 @@ const createManualCampaign = (name, portfolioId) => {
   return records;
 };
 
+//--------- add keywords
+
+const createNewKeywordRecords = (newCampaign, newCampaignName, adGroup, customerSearchTerm, autoCampaign) => {
+  newCampaign = [
+    ...newCampaign,
+    {
+      ...blank,
+      recordType: "Keyword",
+      campaign: newCampaignName,
+      adGroup,
+      keywordOrProductTargeting: customerSearchTerm,
+      matchType: adGroup.toLowerCase(),
+      campaignStatus: "enabled",
+      adGroupStatus: "enabled",
+      status: "enabled",
+    },
+  ];
+
+  // add exact or phrase for auto campaign
+  newCampaign = [
+    ...newCampaign,
+    {
+      ...blank,
+      recordType: "Keyword",
+      campaignId: autoCampaign.campaignId,
+      campaign: autoCampaign.campaign,
+      keywordOrProductTargeting: customerSearchTerm,
+      matchType: adGroup === "Exact"
+        ? "campaign negative exact"
+        : "campaign negative phrase",
+      campaignStatus: "enabled",
+      status: "enabled",
+    },
+  ];
+
+  // if adding as broad, then add as neg exact to the broad campaign
+  if (adGroup === "Broad") {
+    newCampaign = [
+      ...newCampaign,
+      {
+        ...blank,
+        recordType: "Keyword",
+        campaign: newCampaignName,
+        keywordOrProductTargeting: customerSearchTerm,
+        matchType: "campaign negative exact",
+        campaignStatus: "enabled",
+        status: "enabled",
+      },
+    ];
+  }
+  return newCampaign;
+}
+
+
 //--------- create broad test campaigns from current manual campaigns
 
 const createTestCampaigns = (data) => {
@@ -566,56 +620,7 @@ const createNewKeywordCampaign = ({
   });
 
   // add keyword
-  newCampaign = [
-    ...newCampaign,
-    {
-      ...blank,
-      recordType: "Keyword",
-      campaign: newCampaignName,
-      adGroup,
-      keywordOrProductTargeting: customerSearchTerm,
-      matchType: adGroup.toLowerCase(),
-      campaignStatus: "enabled",
-      adGroupStatus: "enabled",
-      status: "enabled",
-    },
-  ];
-
-  // add exact or phrase for auto campaign
-
-  newCampaign = [
-    ...newCampaign,
-    {
-      ...blank,
-      recordType: "Keyword",
-      campaignId: autoCampaign.campaignId,
-      campaign: autoCampaign.campaign,
-      keywordOrProductTargeting: customerSearchTerm,
-      matchType:
-        adGroup === "Exact"
-          ? "campaign negative exact"
-          : "campaign negative phrase",
-      campaignStatus: "enabled",
-      status: "enabled",
-    },
-  ];
-
-  // if adding as broad, then add as neg exact to the broad campaign
-
-  if (adGroup === "Broad") {
-    newCampaign = [
-      ...newCampaign,
-      {
-        ...blank,
-        recordType: "Keyword",
-        campaign: newCampaignName,
-        keywordOrProductTargeting: customerSearchTerm,
-        matchType: "campaign negative exact",
-        campaignStatus: "enabled",
-        status: "enabled",
-      },
-    ];
-  }
+  newCampaign = createNewKeywordRecords(newCampaign, newCampaignName, adGroup, customerSearchTerm, autoCampaign);
 
   // add general negatives
 
@@ -675,6 +680,9 @@ const createPromotionCampaigns = (data, sales) => {
 
   // for each keyword, create a test & perf campaign if nec
 
+  const newTestCampaigns = []
+  const newPerfCampaigns = []
+
   autoCampaignsWithOrders.forEach((co) => {
     const autoCampaign = allCampaigns.find(
       (c) => c.campaign === co.campaignName
@@ -692,10 +700,14 @@ const createPromotionCampaigns = (data, sales) => {
     //--- check for existing Test campaign
 
     const testRegex = new RegExp(`^${baseCampaignName} (T|Test)$`);
+    const newTestCampaignName = baseCampaignName + " Test";
 
-    if (!allCampaigns.find((c) => testRegex.test(c.campaign))) {
+    if (!allCampaigns.find((c) => testRegex.test(c.campaign)) && ! newTestCampaigns.find(c => c === baseCampaignName)) {
+
+      newTestCampaigns.push(baseCampaignName)
+
       const testCampaign = createNewKeywordCampaign({
-        newCampaignName: baseCampaignName + " Test",
+        newCampaignName: newTestCampaignName,
         autoCampaign,
         adGroup: "Broad",
         asin,
@@ -708,16 +720,23 @@ const createPromotionCampaigns = (data, sales) => {
     } else {
       // existing test found
       // if keyword not found, add it
-      // console.log("--------------found", co.campaignName);
+
+      const newKeywordRecords = createNewKeywordRecords([], newTestCampaignName, "Broad", co.customerSearchTerm, autoCampaign);
+
+      newCampaigns = [...newCampaigns, ...newKeywordRecords];
     }
 
     //--- check for existing Perf campaign
 
     const perfRegex = new RegExp(`^${baseCampaignName} (M||K|Perf)$`);
+    const newPerfCampaignName = baseCampaignName + " Perf";
 
-    if (!allCampaigns.find((c) => perfRegex.test(c.campaign))) {
+    if (!allCampaigns.find((c) => perfRegex.test(c.campaign)) && ! newPerfCampaigns.find(c => c === baseCampaignName)) {
+
+      newPerfCampaigns.push(baseCampaignName)
+
       const perfCampaign = createNewKeywordCampaign({
-        newCampaignName: baseCampaignName + " Perf",
+        newCampaignName: newPerfCampaignName,
         autoCampaign,
         adGroup: "Exact",
         asin,
@@ -727,6 +746,14 @@ const createPromotionCampaigns = (data, sales) => {
       });
 
       newCampaigns = [...newCampaigns, ...perfCampaign];
+    } else {
+      // existing test found
+      // if keyword not found, add it
+
+      const newKeywordRecords = createNewKeywordRecords([], newPerfCampaignName, "Exact", co.customerSearchTerm, autoCampaign);
+
+      newCampaigns = [...newCampaigns, ...newKeywordRecords];
+
     }
   });
 
