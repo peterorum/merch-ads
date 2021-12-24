@@ -371,7 +371,13 @@ const createManualCampaign = (name, portfolioId) => {
 
 //--------- add keywords
 
-const createNewKeywordRecords = (newCampaign, newCampaignName, adGroup, customerSearchTerm, autoCampaign) => {
+const createNewKeywordRecords = (
+  newCampaign,
+  newCampaignName,
+  adGroup,
+  customerSearchTerm,
+  autoCampaign
+) => {
   newCampaign = [
     ...newCampaign,
     {
@@ -396,9 +402,10 @@ const createNewKeywordRecords = (newCampaign, newCampaignName, adGroup, customer
       campaignId: autoCampaign.campaignId,
       campaign: autoCampaign.campaign,
       keywordOrProductTargeting: customerSearchTerm,
-      matchType: adGroup === "Exact"
-        ? "campaign negative exact"
-        : "campaign negative phrase",
+      matchType:
+        adGroup === "Exact"
+          ? "campaign negative exact"
+          : "campaign negative phrase",
       campaignStatus: "enabled",
       status: "enabled",
     },
@@ -420,8 +427,7 @@ const createNewKeywordRecords = (newCampaign, newCampaignName, adGroup, customer
     ];
   }
   return newCampaign;
-}
-
+};
 
 //--------- create broad test campaigns from current manual campaigns
 
@@ -620,7 +626,13 @@ const createNewKeywordCampaign = ({
   });
 
   // add keyword
-  newCampaign = createNewKeywordRecords(newCampaign, newCampaignName, adGroup, customerSearchTerm, autoCampaign);
+  newCampaign = createNewKeywordRecords(
+    newCampaign,
+    newCampaignName,
+    adGroup,
+    customerSearchTerm,
+    autoCampaign
+  );
 
   // add general negatives
 
@@ -680,8 +692,8 @@ const createPromotionCampaigns = (data, sales) => {
 
   // for each keyword, create a test & perf campaign if nec
 
-  const newTestCampaigns = []
-  const newPerfCampaigns = []
+  const newTestCampaigns = [];
+  const newPerfCampaigns = [];
 
   autoCampaignsWithOrders.forEach((co) => {
     const autoCampaign = allCampaigns.find(
@@ -702,9 +714,11 @@ const createPromotionCampaigns = (data, sales) => {
     const testRegex = new RegExp(`^${baseCampaignName} (T|Test)$`);
     const newTestCampaignName = baseCampaignName + " Test";
 
-    if (!allCampaigns.find((c) => testRegex.test(c.campaign)) && ! newTestCampaigns.find(c => c === baseCampaignName)) {
-
-      newTestCampaigns.push(baseCampaignName)
+    if (
+      !allCampaigns.find((c) => testRegex.test(c.campaign)) &&
+      !newTestCampaigns.find((c) => c === baseCampaignName)
+    ) {
+      newTestCampaigns.push(baseCampaignName);
 
       const testCampaign = createNewKeywordCampaign({
         newCampaignName: newTestCampaignName,
@@ -721,9 +735,24 @@ const createPromotionCampaigns = (data, sales) => {
       // existing test found
       // if keyword not found, add it
 
-      const newKeywordRecords = createNewKeywordRecords([], newTestCampaignName, "Broad", co.customerSearchTerm, autoCampaign);
+      if (
+        !data.find(
+          (d) =>
+            !allCampaigns.find((c) => testRegex.test(d.campaign)) &&
+            d.recordType === "Keyword" &&
+            d.keywordOrProductTargeting === co.customerSearchTerm
+        )
+      ) {
+        const newKeywordRecords = createNewKeywordRecords(
+          [],
+          newTestCampaignName,
+          "Broad",
+          co.customerSearchTerm,
+          autoCampaign
+        );
 
-      newCampaigns = [...newCampaigns, ...newKeywordRecords];
+        newCampaigns = [...newCampaigns, ...newKeywordRecords];
+      }
     }
 
     //--- check for existing Perf campaign
@@ -731,9 +760,14 @@ const createPromotionCampaigns = (data, sales) => {
     const perfRegex = new RegExp(`^${baseCampaignName} (M||K|Perf)$`);
     const newPerfCampaignName = baseCampaignName + " Perf";
 
-    if (!allCampaigns.find((c) => perfRegex.test(c.campaign)) && ! newPerfCampaigns.find(c => c === baseCampaignName)) {
-
-      newPerfCampaigns.push(baseCampaignName)
+    if (
+      !allCampaigns.find(
+        (c) =>
+          perfRegex.test(c.campaign) &&
+          !newPerfCampaigns.find((c) => c === baseCampaignName)
+      )
+    ) {
+      newPerfCampaigns.push(baseCampaignName);
 
       const perfCampaign = createNewKeywordCampaign({
         newCampaignName: newPerfCampaignName,
@@ -750,10 +784,23 @@ const createPromotionCampaigns = (data, sales) => {
       // existing test found
       // if keyword not found, add it
 
-      const newKeywordRecords = createNewKeywordRecords([], newPerfCampaignName, "Exact", co.customerSearchTerm, autoCampaign);
+      if (
+        !data.find(
+          (d) =>
+            !allCampaigns.find((c) => perfRegex.test(d.campaign)) &&
+            d.keywordOrProductTargeting === co.customerSearchTerm
+        )
+      ) {
+        const newKeywordRecords = createNewKeywordRecords(
+          [],
+          newPerfCampaignName,
+          "Exact",
+          co.customerSearchTerm,
+          autoCampaign
+        );
 
-      newCampaigns = [...newCampaigns, ...newKeywordRecords];
-
+        newCampaigns = [...newCampaigns, ...newKeywordRecords];
+      }
     }
   });
 
