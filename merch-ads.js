@@ -961,6 +961,60 @@ const lowerBidsOnLowSales = (data) => {
     // puase if hits minimum
     if (newBid <= minimumBid) {
       k.status = "paused";
+      console.log("Paused", k.campaign);
+    }
+  });
+
+  outputRecords(keywords);
+};
+
+// raise bids on low impression targets
+
+const handlePerformers = (data) => {
+  // increase or decrease bids on sellers based on ACOS
+
+  const minOrders = 2;
+  const percentageChange = 10;
+
+  const allCampaigns = data.filter(
+    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+  );
+
+  // find keyword targets with enough orders
+
+  const keywords = data.filter(
+    (c) =>
+      // keyword
+      ((c.recordType === "Keyword" &&
+        (c.matchType === "broad" || c.matchType === "exact")) ||
+        // auto
+        (c.recordType === "Product Targeting" &&
+          (c.keywordOrProductTargeting === "close-match" ||
+            c.keywordOrProductTargeting === "loose-match" ||
+            c.keywordOrProductTargeting === "complements" ||
+            c.keywordOrProductTargeting === "substitutes"))) &&
+      c.orders >= minOrders
+  );
+
+  keywords.forEach((k) => {
+    if (k.acos <= targetAcos) {
+      // up bid if under acos
+
+      const newBid = increaseBid(k.maxBid, percentageChange);
+
+      k.maxBid = increaseBid(k.maxBid, percentageChange);
+    } else {
+      // decrease bid if over acos
+
+      const newBid = decreaseBid(k.maxBid, percentageChange);
+
+      k.maxBid = newBid;
+
+      // puase if hits minimum
+      if (newBid <= minimumBid) {
+        k.status = "paused";
+        console.log("Seller Paused", k.campaign);
+      }
     }
   });
 
@@ -1040,12 +1094,19 @@ const main = () => {
       break;
     }
 
+    case "--performers": {
+      handlePerformers(data);
+
+      break;
+    }
+
     default: {
       console.log("--auto-bid\tSet bid for auto campaigns");
       console.log("--neg\t\tAdd negative keywords");
       console.log("--tests\t\tCreate broad test campaigns");
       console.log("--impress\t\tUp bids on low impression targets");
       console.log("--unsold\t\tReduce bids on high clicks with low sales");
+      console.log("--performers\t\tAdjust bids based on ACOS");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
       );
