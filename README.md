@@ -42,9 +42,3 @@ If orders > 1 & acos > target acos, decrease bid by 10%. OR base it on how high 
     40-50%  -15%
     50+%    -20%
     Keep changes incremental
-
-Pause zero order campaign targets
-Orders = 0 & Clicks > 20-40 -> pause. Or gradually reduce bid before pausing.
-
-Pause single order campaigns, but wait for more clicks
-Orders = 0 & Clicks > 50-80, ACOS > 80-100& (optional) -> pause. Or gradually reduce bid before pausing.

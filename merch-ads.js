@@ -18,6 +18,8 @@ const minimumBid = 0.04;
 
 const defaultBid = 0.2;
 
+const targetAcos = 25;
+
 // results file
 let resultsFile = 0;
 
@@ -135,6 +137,7 @@ const loadData = () => {
       impressions: d.impressions ? parseFloat(d.impressions) : d.impressions,
       clicks: d.clicks ? parseFloat(d.clicks) : d.clicks,
       orders: d.orders ? parseFloat(d.orders) : d.orders,
+      acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
     };
   });
 
@@ -263,7 +266,7 @@ const lowerAutoBids = (db, bid) => {
 
 const outputRecord = (d) => {
   // prettier-ignore
-  const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t\n`
+  const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}%\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t\n`
 
   // console.log(s);
 
@@ -886,8 +889,15 @@ const raiseBidsOnLowImpressions = (data) => {
 
   const keywords = data.filter(
     (c) =>
-      c.recordType === "Keyword" &&
-      (c.matchType === "broad" || c.matchType === "exact") &&
+      // keyword
+      ((c.recordType === "Keyword" &&
+        (c.matchType === "broad" || c.matchType === "exact")) ||
+        // auto
+        (c.recordType === "Product Targeting" &&
+          (c.keywordOrProductTargeting === "close-match" ||
+            c.keywordOrProductTargeting === "loose-match" ||
+            c.keywordOrProductTargeting === "complements" ||
+            c.keywordOrProductTargeting === "substitutes"))) &&
       c.impressions < fewImpressions &&
       oldCampaigns.find((oc) => oc.campaign === c.campaign)
   );
@@ -911,10 +921,11 @@ const raiseBidsOnLowImpressions = (data) => {
 
 // raise bids on low impression targets
 
-const lowerBidsOnUnsold = (data) => {
+const lowerBidsOnLowSales = (data) => {
   // reduce bid on targets with high clicks but no orders
 
-  const manyClicks = 10;
+  const zeroSalesManyClicks = 10;
+  const singleSaleManyClicks = 20;
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
@@ -925,9 +936,21 @@ const lowerBidsOnUnsold = (data) => {
 
   const keywords = data.filter(
     (c) =>
-      c.recordType === "Keyword" &&
-      (c.matchType === "broad" || c.matchType === "exact") &&
-      c.clicks >= manyClicks
+      // keyword
+      ((c.recordType === "Keyword" &&
+        (c.matchType === "broad" || c.matchType === "exact")) ||
+        // auto
+        (c.recordType === "Product Targeting" &&
+          (c.keywordOrProductTargeting === "close-match" ||
+            c.keywordOrProductTargeting === "loose-match" ||
+            c.keywordOrProductTargeting === "complements" ||
+            c.keywordOrProductTargeting === "substitutes"))) &&
+      // no sales
+      ((c.orders === 0 && c.clicks >= zeroSalesManyClicks) ||
+        // 1 sale & bad acos & more clicks
+        (c.orders === 1 &&
+          c.clicks >= singleSaleManyClicks &&
+          c.acos > targetAcos))
   );
 
   keywords.forEach((k) => {
@@ -1012,7 +1035,7 @@ const main = () => {
     }
 
     case "--unsold": {
-      lowerBidsOnUnsold(data);
+      lowerBidsOnLowSales(data);
 
       break;
     }
