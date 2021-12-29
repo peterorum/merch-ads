@@ -1,4 +1,4 @@
-const { log } = require("console");
+const { log, assert } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
 
@@ -6,7 +6,10 @@ const { exit, argv } = require("process");
 const dataFile = "data/data.txt";
 const salesFile = "data/sales.txt";
 
-const  missingAsins = require("./data/missing-asins.json")
+const missingAsins = require("./data/missing-asins.json");
+
+// results file
+let resultsFile = 0
 
 // for ease of create a new record using spread operator
 
@@ -114,8 +117,6 @@ const loadData = () => {
 
   const [headings, ...data1] = data;
 
-  outputRecord(headings);
-
   // convert numeric fields
   const data2 = data1.map((d) => {
     return {
@@ -124,7 +125,7 @@ const loadData = () => {
     };
   });
 
-  return data2;
+  return { data: data2, headings };
 };
 
 // debug log & exit
@@ -249,9 +250,13 @@ const lowerAutoBids = (db, bid) => {
 
 const outputRecord = (d) => {
   // prettier-ignore
-  const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t`
+  const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t\n`
 
-  console.log(s);
+  // console.log(s);
+
+  assert(resultsFile)
+
+  resultsFile.write(s);
 };
 const outputRecords = (db) => {
   // db.forEach((d) => {
@@ -711,15 +716,15 @@ const createPromotionCampaigns = (data, sales) => {
       (c) => c.campaign === co.campaignName && c.recordType === "Ad"
     ).asin;
 
-    if (!asin ){
-      asin = missingAsins[co.campaignName]
+    if (!asin) {
+      asin = missingAsins[co.campaignName];
     }
 
     if (!asin) {
       // asin missing from Ad in bulk download for unknown reason
-      console.log('No asin for', co.campaignName);
+      console.log("No asin for", co.campaignName);
       console.log("add to data/missing-asins.json");
-      exit()
+      exit();
     }
 
     //--- check for existing Test campaign
@@ -820,66 +825,79 @@ const createPromotionCampaigns = (data, sales) => {
   outputRecords(newCampaigns);
 };
 
-//---------
+//--------- main
 
-const data = loadData();
+const main = () => {
+  resultsFile = fs.createWriteStream("/tmp/results.txt", {
+    flags: "w",
+  });
 
-const db = createDb(data);
+  const { data, headings } = loadData();
 
-switch (argv[2]) {
-  case "--auto-bid": {
-    const db2 = lowerAutoBids(db, 0.2);
+  outputRecord(headings);
 
-    outputRecords(db2);
+  const db = createDb(data);
 
-    break;
-  }
+  switch (argv[2]) {
+    case "--auto-bid": {
+      const db2 = lowerAutoBids(db, 0.2);
 
-  case "--neg": {
-    // addNegativeKeywords(data, "", "data/negative/all.txt");
+      outputRecords(db2);
 
-    const niches = [
-      // "Bridge", "Cats",
-      // "Martial Karate",
-      "Psychology",
-      // "Pizza", "Art Sketch", "Vego", "Write"
-    ];
+      break;
+    }
 
-    niches.forEach((niche) => {
-      addNegativeKeywords(
-        data,
-        niche,
-        `data/negative/${niche.toLowerCase()}.txt`
+    case "--neg": {
+      // addNegativeKeywords(data, "", "data/negative/all.txt");
+
+      const niches = [
+        // "Bridge", "Cats",
+        // "Martial Karate",
+        "Psychology",
+        // "Pizza", "Art Sketch", "Vego", "Write"
+      ];
+
+      niches.forEach((niche) => {
+        addNegativeKeywords(
+          data,
+          niche,
+          `data/negative/${niche.toLowerCase()}.txt`
+        );
+      });
+
+      break;
+    }
+
+    // create test campaigns from exact
+
+    case "--tests": {
+      createTestCampaigns(data);
+
+      break;
+    }
+
+    // create test & performance campaigns from auto sales
+
+    case "--promote": {
+      const sales = loadSales();
+
+      createPromotionCampaigns(data, sales);
+
+      break;
+    }
+
+    default: {
+      console.log("--auto-bid\tSet bid for auto campaigns");
+      console.log("--neg\t\tAdd negative keywords");
+      console.log("--tests\t\tCreate broad test campaigns");
+      console.log(
+        "--promote\t\tCreate test & performance campaigns from auto sales"
       );
-    });
-
-    break;
+    }
   }
 
-  // create test campaigns from exact
+  resultsFile.close()
 
-  case "--tests": {
-    createTestCampaigns(data);
+};
 
-    break;
-  }
-
-  // create test & performance campaigns from auto sales
-
-  case "--promote": {
-    const sales = loadSales();
-
-    createPromotionCampaigns(data, sales);
-
-    break;
-  }
-
-  default: {
-    console.log("--auto-bid\tSet bid for auto campaigns");
-    console.log("--neg\t\tAdd negative keywords");
-    console.log("--tests\t\tCreate broad test campaigns");
-    console.log(
-      "--promote\t\tCreate test & performance campaigns from auto sales"
-    );
-  }
-}
+main();

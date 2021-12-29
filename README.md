@@ -19,3 +19,35 @@ Redirect the output to a text file. Open that file in VSCode, copy and paste it 
 6. open /tmp/promote.txt
 7. Copy & paste into a new Excel sheet that has been all formatted as Text.
 8. Upload to Amazon Ads.
+
+## Recipes
+
+--impress
+If campaign is 3 days or older
+For each target that has < 50 impressions
+Increase bid by 10%
+
+
+TODO:
+
+(Based on targets eg 4 targets in auto)
+
+Boost good performers
+If orders > 1 & acos < target acos, up bid by 10%
+
+Decrease poor performers
+If orders > 1 & acos > target acos, decrease bid by 10%. OR base it on how high the acos is.
+    ACOS    Decrease
+    30-40%  -10%
+    40-50%  -15%
+    50+%    -20%
+    Keep changes incremental
+
+Pause zero order campaign targets
+Orders = 0 & Clicks > 20-40 -> pause. Or gradually reduce bid before pausing.
+
+Pause single order campaigns, but wait for more clicks
+Orders = 0 & Clicks > 50-80, ACOS > 80-100& (optional) -> pause. Or gradually reduce bid before pausing.
+
+Get more impressions
+If impressions < 0-25, increase bid by 10%.
