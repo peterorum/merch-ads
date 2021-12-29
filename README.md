@@ -48,6 +48,3 @@ Orders = 0 & Clicks > 20-40 -> pause. Or gradually reduce bid before pausing.
 
 Pause single order campaigns, but wait for more clicks
 Orders = 0 & Clicks > 50-80, ACOS > 80-100& (optional) -> pause. Or gradually reduce bid before pausing.
-
-Get more impressions
-If impressions < 0-25, increase bid by 10%.

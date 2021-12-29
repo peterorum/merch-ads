@@ -10,8 +10,11 @@ const salesFile = "data/sales.txt";
 
 const missingAsins = require("./data/missing-asins.json");
 
-// maximum allowable $bid
+// min & maximum allowable $bid
 const maximumBid = 1;
+
+// bids are paused if they reach this
+const minimumBid = 0.04;
 
 const defaultBid = 0.2;
 
@@ -130,6 +133,8 @@ const loadData = () => {
       ...d,
       maxBid: d.maxBid ? parseFloat(d.maxBid) : d.maxBid,
       impressions: d.impressions ? parseFloat(d.impressions) : d.impressions,
+      clicks: d.clicks ? parseFloat(d.clicks) : d.clicks,
+      orders: d.orders ? parseFloat(d.orders) : d.orders,
     };
   });
 
@@ -843,6 +848,16 @@ const increaseBid = (bid, percentage) => {
   return Math.min(newBid / 100, maximumBid);
 };
 
+// up the bid by a percentage
+
+const decreaseBid = (bid, percentage) => {
+  const bid1 = 100 * (bid || defaultBid);
+
+  const newBid = Math.floor(bid1 - (bid1 * percentage) / 100);
+
+  return Math.max(newBid / 100, minimumBid);
+};
+
 // raise bids on low impression targets
 
 const raiseBidsOnLowImpressions = (data) => {
@@ -890,6 +905,41 @@ const raiseBidsOnLowImpressions = (data) => {
 
       (k.maxBid = increaseBid(k.maxBid, percentageIncrease))
   );
+
+  outputRecords(keywords);
+};
+
+// raise bids on low impression targets
+
+const lowerBidsOnUnsold = (data) => {
+  // reduce bid on targets with high clicks but no orders
+
+  const manyClicks = 10;
+  const percentageDecrease = 10;
+
+  const allCampaigns = data.filter(
+    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+  );
+
+  // find keyword targets with clicks but no orders
+
+  const keywords = data.filter(
+    (c) =>
+      c.recordType === "Keyword" &&
+      (c.matchType === "broad" || c.matchType === "exact") &&
+      c.clicks >= manyClicks
+  );
+
+  keywords.forEach((k) => {
+    const newBid = decreaseBid(k.maxBid, percentageDecrease);
+
+    k.maxBid = newBid;
+
+    // puase if hits minimum
+    if (newBid <= minimumBid) {
+      k.status = "paused";
+    }
+  });
 
   outputRecords(keywords);
 };
@@ -961,11 +1011,18 @@ const main = () => {
       break;
     }
 
+    case "--unsold": {
+      lowerBidsOnUnsold(data);
+
+      break;
+    }
+
     default: {
       console.log("--auto-bid\tSet bid for auto campaigns");
       console.log("--neg\t\tAdd negative keywords");
       console.log("--tests\t\tCreate broad test campaigns");
       console.log("--impress\t\tUp bids on low impression targets");
+      console.log("--unsold\t\tReduce bids on high clicks with low sales");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
       );
