@@ -2,14 +2,21 @@ const { log, assert } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
 
+const { differenceInDays, parse } = require("date-fns");
+
 // tab-separated files
 const dataFile = "data/data.txt";
 const salesFile = "data/sales.txt";
 
 const missingAsins = require("./data/missing-asins.json");
 
+// maximum allowable $bid
+const maximumBid = 1;
+
+const defaultBid = 0.2;
+
 // results file
-let resultsFile = 0
+let resultsFile = 0;
 
 // for ease of create a new record using spread operator
 
@@ -122,6 +129,7 @@ const loadData = () => {
     return {
       ...d,
       maxBid: d.maxBid ? parseFloat(d.maxBid) : d.maxBid,
+      impressions: d.impressions ? parseFloat(d.impressions) : d.impressions,
     };
   });
 
@@ -254,7 +262,7 @@ const outputRecord = (d) => {
 
   // console.log(s);
 
-  assert(resultsFile)
+  assert(resultsFile);
 
   resultsFile.write(s);
 };
@@ -825,6 +833,67 @@ const createPromotionCampaigns = (data, sales) => {
   outputRecords(newCampaigns);
 };
 
+// up the bid by a percentage
+
+const increaseBid = (bid, percentage) => {
+  const bid1 = 100 * (bid || defaultBid);
+
+  const newBid = Math.ceil(bid1 + (bid1 * percentage) / 100);
+
+  return Math.min(newBid / 100, maximumBid);
+};
+
+// raise bids on low impression targets
+
+const raiseBidsOnLowImpressions = (data) => {
+  // for campaigns 3 days or older
+  // up bid on targets with low impressions by 10%
+
+  // get older campaigns
+
+  const oldCampaignAge = 6;
+  const fewImpressions = 50;
+  const percentageIncrease = 10;
+
+  const allCampaigns = data.filter(
+    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+  );
+
+  const oldCampaigns = allCampaigns.filter(
+    (c) =>
+      differenceInDays(
+        new Date(),
+        parse(c.campaignStartDate, "MM/dd/yyyy", new Date())
+      ) >= oldCampaignAge
+  );
+
+  // find keyword targets with few impressions
+
+  const keywords = data.filter(
+    (c) =>
+      c.recordType === "Keyword" &&
+      (c.matchType === "broad" || c.matchType === "exact") &&
+      c.impressions < fewImpressions &&
+      oldCampaigns.find((oc) => oc.campaign === c.campaign)
+  );
+
+  keywords.forEach(
+    (k) =>
+      // console.log(
+      //   k.campaign,
+      //   k.keywordOrProductTargeting,
+      //   k.impressions,
+      //   k.maxBid,
+      //   '---',
+      //   increaseBid(k.maxBid, 10)
+      // )
+
+      (k.maxBid = increaseBid(k.maxBid, percentageIncrease))
+  );
+
+  outputRecords(keywords);
+};
+
 //--------- main
 
 const main = () => {
@@ -886,18 +955,24 @@ const main = () => {
       break;
     }
 
+    case "--impress": {
+      raiseBidsOnLowImpressions(data);
+
+      break;
+    }
+
     default: {
       console.log("--auto-bid\tSet bid for auto campaigns");
       console.log("--neg\t\tAdd negative keywords");
       console.log("--tests\t\tCreate broad test campaigns");
+      console.log("--impress\t\tUp bids on low impression targets");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
       );
     }
   }
 
-  resultsFile.close()
-
+  resultsFile.close();
 };
 
 main();

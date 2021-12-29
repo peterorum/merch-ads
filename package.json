@@ -1,0 +1,22 @@
+{
+  "name": "merch-ads",
+  "version": "1.0.0",
+  "description": "Maintain Amazon Ad campaigns",
+  "main": "merch-ads.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peterorum/merch-ads.git"
+  },
+  "author": "peter@peterorum.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/peterorum/merch-ads/issues"
+  },
+  "homepage": "https://github.com/peterorum/merch-ads#readme",
+  "dependencies": {
+    "date-fns": "^2.28.0"
+  }
+}
