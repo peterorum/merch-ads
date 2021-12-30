@@ -36,3 +36,10 @@ Reduce bids on targets that have had many clicks but zero or one sale
 
 --performers
 Increase or decrease bids for good sellers pased on ACoS.
+
+--clickless
+Decrease bids for low CTR
+
+# TODO
+
+If all targets in a campaign are paused, look at deleting product.

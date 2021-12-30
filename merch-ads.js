@@ -958,10 +958,10 @@ const lowerBidsOnLowSales = (data) => {
 
     k.maxBid = newBid;
 
-    // puase if hits minimum
+    // pause if hits minimum
     if (newBid <= minimumBid) {
       k.status = "paused";
-      console.log("Paused", k.campaign);
+      console.log("Paused: High Clicks, Low Sales", k.campaign, k.keywordOrProductTargeting);
     }
   });
 
@@ -982,7 +982,7 @@ const handlePerformers = (data) => {
 
   // find keyword targets with enough orders
 
-  const keywords = data.filter(
+  const targets = data.filter(
     (c) =>
       // keyword
       ((c.recordType === "Keyword" &&
@@ -996,7 +996,7 @@ const handlePerformers = (data) => {
       c.orders >= minOrders
   );
 
-  keywords.forEach((k) => {
+  targets.forEach((k) => {
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
@@ -1010,15 +1010,61 @@ const handlePerformers = (data) => {
 
       k.maxBid = newBid;
 
-      // puase if hits minimum
+      // pause if hits minimum
       if (newBid <= minimumBid) {
         k.status = "paused";
-        console.log("Seller Paused", k.campaign);
+        console.log("Paused: High ACoS", k.campaign, k.keywordOrProductTargeting);
       }
     }
   });
 
-  outputRecords(keywords);
+  outputRecords(targets);
+};
+
+// lower bids on low ctr
+
+const handleClickless = (data) => {
+  // reduce bid on targets with many impressions but low clicks
+
+  const manyImpressions = 1000;
+  const lowCtr = 0.001;
+  const percentageDecrease = 10;
+
+  const allCampaigns = data.filter(
+    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+  );
+
+  // find targets with few impressions
+
+  const targets = data.filter(
+    (c) =>
+      // keyword
+      ((c.recordType === "Keyword" &&
+        (c.matchType === "broad" || c.matchType === "exact")) ||
+        // auto
+        (c.recordType === "Product Targeting" &&
+          (c.keywordOrProductTargeting === "close-match" ||
+            c.keywordOrProductTargeting === "loose-match" ||
+            c.keywordOrProductTargeting === "complements" ||
+            c.keywordOrProductTargeting === "substitutes"))) &&
+      c.impressions >= manyImpressions &&
+      c.clicks / c.impressions < lowCtr
+  );
+
+  targets.forEach((k) => {
+    const newBid = decreaseBid(k.maxBid, percentageDecrease);
+
+    k.maxBid = newBid;
+
+    // pause if hits minimum
+    if (newBid <= minimumBid) {
+      k.status = "paused";
+      console.log("Paused: High Impressions, Low CTR", k.campaign, k.keywordOrProductTargeting);
+    }
+  });
+
+  outputRecords(targets);
+
 };
 
 //--------- main
@@ -1100,6 +1146,12 @@ const main = () => {
       break;
     }
 
+    case "--clickless": {
+      handleClickless(data);
+
+      break;
+    }
+
     default: {
       console.log("--auto-bid\tSet bid for auto campaigns");
       console.log("--neg\t\tAdd negative keywords");
@@ -1107,6 +1159,7 @@ const main = () => {
       console.log("--impress\t\tUp bids on low impression targets");
       console.log("--unsold\t\tReduce bids on high clicks with low sales");
       console.log("--performers\t\tAdjust bids based on ACOS");
+      console.log("--clickless\t\tReduce bids on low CTR");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
       );
