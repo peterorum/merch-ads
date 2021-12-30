@@ -752,6 +752,12 @@ const createPromotionCampaigns = (data, sales) => {
       !allCampaigns.find((c) => testRegex.test(c.campaign)) &&
       !newTestCampaigns.find((c) => c === baseCampaignName)
     ) {
+      console.log(
+        "Create Test campaign",
+        baseCampaignName,
+        co.customerSearchTerm
+      );
+
       newTestCampaigns.push(baseCampaignName);
 
       const testCampaign = createNewKeywordCampaign({
@@ -777,6 +783,12 @@ const createPromotionCampaigns = (data, sales) => {
             d.keywordOrProductTargeting === co.customerSearchTerm
         )
       ) {
+        console.log(
+          "Update Test campaign",
+          baseCampaignName,
+          co.customerSearchTerm
+        );
+
         const newKeywordRecords = createNewKeywordRecords(
           [],
           newTestCampaignName,
@@ -801,6 +813,12 @@ const createPromotionCampaigns = (data, sales) => {
           !newPerfCampaigns.find((c) => c === baseCampaignName)
       )
     ) {
+      console.log(
+        "Create Perf campaign",
+        baseCampaignName,
+        co.customerSearchTerm
+      );
+
       newPerfCampaigns.push(baseCampaignName);
 
       const perfCampaign = createNewKeywordCampaign({
@@ -825,6 +843,12 @@ const createPromotionCampaigns = (data, sales) => {
             d.keywordOrProductTargeting === co.customerSearchTerm
         )
       ) {
+        console.log(
+          "Update Perf campaign",
+          baseCampaignName,
+          co.customerSearchTerm
+        );
+
         const newKeywordRecords = createNewKeywordRecords(
           [],
           newPerfCampaignName,
@@ -902,19 +926,9 @@ const raiseBidsOnLowImpressions = (data) => {
       oldCampaigns.find((oc) => oc.campaign === c.campaign)
   );
 
-  keywords.forEach(
-    (k) =>
-      // console.log(
-      //   k.campaign,
-      //   k.keywordOrProductTargeting,
-      //   k.impressions,
-      //   k.maxBid,
-      //   '---',
-      //   increaseBid(k.maxBid, 10)
-      // )
-
-      (k.maxBid = increaseBid(k.maxBid, percentageIncrease))
-  );
+  keywords.forEach((k) => {
+    k.maxBid = increaseBid(k.maxBid, percentageIncrease);
+  });
 
   outputRecords(keywords);
 };
@@ -961,7 +975,11 @@ const lowerBidsOnLowSales = (data) => {
     // pause if hits minimum
     if (newBid <= minimumBid) {
       k.status = "paused";
-      console.log("Paused: High Clicks, Low Sales", k.campaign, k.keywordOrProductTargeting);
+      console.log(
+        "Paused: High Clicks, Low Sales",
+        k.campaign,
+        k.keywordOrProductTargeting
+      );
     }
   });
 
@@ -1013,7 +1031,11 @@ const handlePerformers = (data) => {
       // pause if hits minimum
       if (newBid <= minimumBid) {
         k.status = "paused";
-        console.log("Paused: High ACoS", k.campaign, k.keywordOrProductTargeting);
+        console.log(
+          "Paused: High ACoS",
+          k.campaign,
+          k.keywordOrProductTargeting
+        );
       }
     }
   });
@@ -1059,12 +1081,15 @@ const handleClickless = (data) => {
     // pause if hits minimum
     if (newBid <= minimumBid) {
       k.status = "paused";
-      console.log("Paused: High Impressions, Low CTR", k.campaign, k.keywordOrProductTargeting);
+      console.log(
+        "Paused: High Impressions, Low CTR",
+        k.campaign,
+        k.keywordOrProductTargeting
+      );
     }
   });
 
   outputRecords(targets);
-
 };
 
 //--------- main
@@ -1078,51 +1103,18 @@ const main = () => {
 
   outputRecord(headings);
 
+  const sales = loadSales();
+
   const db = createDb(data);
 
   switch (argv[2]) {
-    case "--auto-bid": {
-      const db2 = lowerAutoBids(db, 0.2);
-
-      outputRecords(db2);
-
-      break;
-    }
-
-    case "--neg": {
-      // addNegativeKeywords(data, "", "data/negative/all.txt");
-
-      const niches = [
-        // "Bridge", "Cats",
-        // "Martial Karate",
-        "Psychology",
-        // "Pizza", "Art Sketch", "Vego", "Write"
-      ];
-
-      niches.forEach((niche) => {
-        addNegativeKeywords(
-          data,
-          niche,
-          `data/negative/${niche.toLowerCase()}.txt`
-        );
-      });
-
-      break;
-    }
-
-    // create test campaigns from exact
-
     case "--tests": {
       createTestCampaigns(data);
 
       break;
     }
 
-    // create test & performance campaigns from auto sales
-
     case "--promote": {
-      const sales = loadSales();
-
       createPromotionCampaigns(data, sales);
 
       break;
@@ -1152,6 +1144,16 @@ const main = () => {
       break;
     }
 
+    case "--all": {
+      createPromotionCampaigns(data, sales);
+      raiseBidsOnLowImpressions(data);
+      lowerBidsOnLowSales(data);
+      handlePerformers(data);
+      handleClickless(data);
+
+      break;
+    }
+
     default: {
       console.log("--auto-bid\tSet bid for auto campaigns");
       console.log("--neg\t\tAdd negative keywords");
@@ -1160,6 +1162,7 @@ const main = () => {
       console.log("--unsold\t\tReduce bids on high clicks with low sales");
       console.log("--performers\t\tAdjust bids based on ACOS");
       console.log("--clickless\t\tReduce bids on low CTR");
+      console.log("--all\t\tProcess all");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
       );
