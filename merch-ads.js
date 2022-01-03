@@ -697,8 +697,13 @@ const createPromotionCampaigns = (data, sales) => {
     .toString()
     .split("\n");
 
+  // ignore product orders, and keywords order with more than 4 words
+
   let campaignsWithOrders = sales.filter(
-    (s) => s.orders > 0 && !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm)
+    (s) =>
+      s.orders > 0 &&
+      !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm) &&
+      s.customerSearchTerm.split(/ /).length <= 4
   );
 
   let newCampaigns = [];

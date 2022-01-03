@@ -32,10 +32,10 @@ For each target that has < 50 impressions
 Increase bid by 10%
 
 --unsold
-Reduce bids on targets that have had many clicks but zero or one sale
+Reduce bids on targets that have had 10 or 20 clicks but zero or one sale respectively
 
 --performers
-Increase or decrease bids for good sellers pased on ACoS.
+Increase or decrease bids for good (>=2) sellers based on ACoS.
 
 --clickless
 Decrease bids for low CTR
