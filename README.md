@@ -27,7 +27,7 @@ Redirect the output to a text file. Open that file in VSCode, copy and paste it 
 These use Bulk data for 60 days, including Zero Impression campaigns
 
 --impress
-If campaign is 3 days or older
+If campaign is 6 days or older
 For each target that has < 50 impressions
 Increase bid by 10%
 

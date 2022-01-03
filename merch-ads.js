@@ -916,6 +916,8 @@ const raiseBidsOnLowImpressions = (data) => {
 
   // find keyword targets with few impressions
 
+  console.log(oldCampaigns);
+
   const keywords = data.filter(
     (c) =>
       // keyword
