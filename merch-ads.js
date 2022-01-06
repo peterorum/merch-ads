@@ -14,7 +14,7 @@ const missingAsins = require("./data/missing-asins.json");
 const maximumBid = 1;
 
 // bids are paused if they reach this
-const minimumBid = 0.04;
+const minimumBid = 0.02;
 
 const defaultBid = 0.2;
 
@@ -916,10 +916,9 @@ const raiseBidsOnLowImpressions = (data) => {
 
   // find keyword targets with few impressions
 
-  console.log(oldCampaigns);
-
   const keywords = data.filter(
     (c) =>
+      c.status === "enabled" &&
       // keyword
       ((c.recordType === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -957,6 +956,7 @@ const lowerBidsOnLowSales = (data) => {
 
   const keywords = data.filter(
     (c) =>
+      c.status === "enabled" &&
       // keyword
       ((c.recordType === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -979,15 +979,15 @@ const lowerBidsOnLowSales = (data) => {
 
     k.maxBid = newBid;
 
-    // pause if hits minimum
-    if (newBid <= minimumBid) {
-      k.status = "paused";
-      console.log(
-        "Paused: High Clicks, Low Sales",
-        k.campaign,
-        k.keywordOrProductTargeting
-      );
-    }
+    // // pause if hits minimum
+    // if (newBid <= minimumBid) {
+    //   k.status = "paused";
+    //   console.log(
+    //     "Paused: High Clicks, Low Sales",
+    //     k.campaign,
+    //     k.keywordOrProductTargeting
+    //   );
+    // }
   });
 
   outputRecords(keywords);
@@ -1035,15 +1035,15 @@ const handlePerformers = (data) => {
 
       k.maxBid = newBid;
 
-      // pause if hits minimum
-      if (newBid <= minimumBid) {
-        k.status = "paused";
-        console.log(
-          "Paused: High ACoS",
-          k.campaign,
-          k.keywordOrProductTargeting
-        );
-      }
+      // // pause if hits minimum
+      // if (newBid <= minimumBid) {
+      //   k.status = "paused";
+      //   console.log(
+      //     "Paused: High ACoS",
+      //     k.campaign,
+      //     k.keywordOrProductTargeting
+      //   );
+      // }
     }
   });
 
@@ -1085,15 +1085,15 @@ const handleClickless = (data) => {
 
     k.maxBid = newBid;
 
-    // pause if hits minimum
-    if (newBid <= minimumBid) {
-      k.status = "paused";
-      console.log(
-        "Paused: High Impressions, Low CTR",
-        k.campaign,
-        k.keywordOrProductTargeting
-      );
-    }
+    // // pause if hits minimum
+    // if (newBid <= minimumBid) {
+    //   k.status = "paused";
+    //   console.log(
+    //     "Paused: High Impressions, Low CTR",
+    //     k.campaign,
+    //     k.keywordOrProductTargeting
+    //   );
+    // }
   });
 
   outputRecords(targets);
@@ -1155,8 +1155,8 @@ const main = () => {
       createPromotionCampaigns(data, sales);
       raiseBidsOnLowImpressions(data);
       lowerBidsOnLowSales(data);
-      handlePerformers(data);
       handleClickless(data);
+      handlePerformers(data);
 
       break;
     }
