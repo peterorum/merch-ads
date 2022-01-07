@@ -137,6 +137,7 @@ const loadData = () => {
       impressions: d.impressions ? parseFloat(d.impressions) : d.impressions,
       clicks: d.clicks ? parseFloat(d.clicks) : d.clicks,
       orders: d.orders ? parseFloat(d.orders) : d.orders,
+      spend: d.spend ? parseFloat(d.spend) : d.spend,
       acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
     };
   });
@@ -697,7 +698,7 @@ const createPromotionCampaigns = (data, sales) => {
     .toString()
     .split("\n");
 
-  // ignore product orders, and keywords order with more than 4 words
+  // ignore product orders, and keywords orders with more than 4 words
 
   let campaignsWithOrders = sales.filter(
     (s) =>
@@ -1067,6 +1068,7 @@ const handleClickless = (data) => {
 
   const targets = data.filter(
     (c) =>
+    c.status === 'enabled' &&
       // keyword
       ((c.recordType === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -1078,6 +1080,54 @@ const handleClickless = (data) => {
             c.keywordOrProductTargeting === "substitutes"))) &&
       c.impressions >= manyImpressions &&
       c.clicks / c.impressions < lowCtr
+  );
+
+  targets.forEach((k) => {
+    const newBid = decreaseBid(k.maxBid, percentageDecrease);
+
+    k.maxBid = newBid;
+
+    // // pause if hits minimum
+    // if (newBid <= minimumBid) {
+    //   k.status = "paused";
+    //   console.log(
+    //     "Paused: High Impressions, Low CTR",
+    //     k.campaign,
+    //     k.keywordOrProductTargeting
+    //   );
+    // }
+  });
+
+  outputRecords(targets);
+};
+
+// lower bids on high spenders withot sales
+
+const handleHighSpend = (data) => {
+
+  const maxSpend = 5;
+  const percentageDecrease = 10;
+
+  const allCampaigns = data.filter(
+    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+  );
+
+  // find targets with high spend
+
+  const targets = data.filter(
+    (c) =>
+    c.status === 'enabled' &&
+      // keyword
+      ((c.recordType === "Keyword" &&
+        (c.matchType === "broad" || c.matchType === "exact")) ||
+        // auto
+        (c.recordType === "Product Targeting" &&
+          (c.keywordOrProductTargeting === "close-match" ||
+            c.keywordOrProductTargeting === "loose-match" ||
+            c.keywordOrProductTargeting === "complements" ||
+            c.keywordOrProductTargeting === "substitutes"))) &&
+      c.spend >= maxSpend &&
+      c.orders === 0
   );
 
   targets.forEach((k) => {
@@ -1133,7 +1183,7 @@ const main = () => {
       break;
     }
 
-    case "--unsold": {
+    case "--HighSpend": {
       lowerBidsOnLowSales(data);
 
       break;
@@ -1151,11 +1201,18 @@ const main = () => {
       break;
     }
 
+    case "--spend": {
+      handleHighSpend(data);
+
+      break;
+    }
+
     case "--all": {
       createPromotionCampaigns(data, sales);
       raiseBidsOnLowImpressions(data);
       lowerBidsOnLowSales(data);
       handleClickless(data);
+      handleHighSpend(data);
       handlePerformers(data);
 
       break;
@@ -1166,9 +1223,10 @@ const main = () => {
       console.log("--neg\t\tAdd negative keywords");
       console.log("--tests\t\tCreate broad test campaigns");
       console.log("--impress\t\tUp bids on low impression targets");
-      console.log("--unsold\t\tReduce bids on high clicks with low sales");
+      console.log("--HighSpend\t\tReduce bids on high clicks with low sales");
       console.log("--performers\t\tAdjust bids based on ACOS");
       console.log("--clickless\t\tReduce bids on low CTR");
+      console.log("--HighSpend\t\tReduce bids on high spend");
       console.log("--all\t\tProcess all");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
