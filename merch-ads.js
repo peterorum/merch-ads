@@ -11,10 +11,8 @@ const salesFile = "data/sales.txt";
 const missingAsins = require("./data/missing-asins.json");
 
 // min & maximum allowable $bid
-const maximumBid = 1;
-
-// bids are paused if they reach this
 const minimumBid = 0.02;
+const maximumBid = 0.6;
 
 const defaultBid = 0.2;
 
@@ -23,7 +21,7 @@ const targetAcos = 25;
 // results file
 let resultsFile = 0;
 
-// for ease of create a new record using spread operator
+// for ease of creating a new record using spread operator
 
 const blank = {
   recordId: "",
