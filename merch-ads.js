@@ -48,7 +48,7 @@ const blank = {
   bid: "",
   keywordText: "",
   matchType: "",
-  biddingStrategy: "",
+  biddingStrategy: "Dynamic bids - down only",
   placement: "",
   percentage: "",
   productTargetingExpression: "",
@@ -288,26 +288,6 @@ const createDb = (data) => {
   return campaigns;
 };
 
-// lower auto bids
-
-const lowerAutoBids = (db, bid) => {
-  console.log("TODO: Treat as flat");
-  exit(1);
-
-  // find all auto campaigns
-  const autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
-
-  // set maxBid to new bid if smaller
-
-  autoCampaigns.forEach((c) => {
-    c.adGroups.forEach((ag) => {
-      ag.maxBid = Math.min(ag.maxBid, bid);
-    });
-  });
-
-  return autoCampaigns;
-};
-
 //--------- dump as text for Excel
 
 const outputRecord = (d) => {
@@ -324,65 +304,6 @@ const outputRecords = (db) => {
   });
 };
 
-//--------- add negative keywords
-
-const addNegativeKeywords = (data, niche, wordFile) => {
-  const campaigns = data.filter((d) => d.entity === "Campaign");
-  let autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
-
-  if (niche) {
-    autoCampaigns = autoCampaigns.filter((c) => c.campaign.startsWith(niche));
-  }
-
-  if (!autoCampaigns.length) {
-    console.log(`No campaigns found for ${niche}`);
-    exit(1);
-  }
-  const words = fs.readFileSync(wordFile).toString().split("\n");
-
-  // for each campaign, create a negative record
-
-  let negativeRecords = [];
-
-  autoCampaigns.forEach((campaign) => {
-    words.forEach((word) => {
-      const keywordRecord = {
-        recordId: "",
-        entity: "Keyword",
-        campaignId: campaign.campaignId,
-        campaign: campaign.campaign,
-        campaignDailyBudget: "",
-        portfolioId: "",
-        campaignStartDate: "",
-        campaignEndDate: "",
-        campaignTargetingType: "",
-        adGroup: "",
-        maxBid: "",
-        keywordText: word,
-        productTargetingId: "",
-        matchType: "negativeExact",
-        asin: "",
-        campaignState: "enabled",
-        adGroupState: "",
-        state: "enabled",
-        impressions: 0,
-        clicks: 0,
-        spend: 0,
-        orders: 0,
-        totalUnits: 0,
-        sales: 0,
-        acos: "0%",
-        biddingStrategy: "",
-        placementType: "",
-        increaseBidsByPlacement: "",
-      };
-
-      negativeRecords = [...negativeRecords, keywordRecord];
-    });
-  });
-
-  outputRecords(negativeRecords);
-};
 
 // create new campaign
 
@@ -786,7 +707,7 @@ const raiseBidsOnLowImpressions = (data) => {
     (c) =>
       differenceInDays(
         new Date(),
-        parse(c.campaignStartDate, "MM/dd/yyyy", new Date())
+        parse(c.startDate, "yyyyMMdd", new Date())
       ) >= oldCampaignAge
   );
 
@@ -794,7 +715,7 @@ const raiseBidsOnLowImpressions = (data) => {
 
   const keywords = data.filter(
     (c) =>
-      c.status === "enabled" &&
+      c.state === "enabled" &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -809,7 +730,8 @@ const raiseBidsOnLowImpressions = (data) => {
   );
 
   keywords.forEach((k) => {
-    k.maxBid = increaseBid(k.maxBid, percentageIncrease);
+    k.bid = increaseBid(k.bid, percentageIncrease);
+    k.operation = "update";
   });
 
   outputRecords(keywords);
@@ -832,7 +754,7 @@ const lowerBidsOnLowSales = (data) => {
 
   const keywords = data.filter(
     (c) =>
-      c.status === "enabled" &&
+      c.state === "enabled" &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -887,17 +809,16 @@ const handlePerformers = (data) => {
   );
 
   targets.forEach((k) => {
+    k.operation = "update";
+
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      const newBid = increaseBid(k.maxBid, percentageChange);
-
-      k.maxBid = increaseBid(k.maxBid, percentageChange);
+      k.bid = increaseBid(k.bid, percentageChange);
     } else {
       // decrease bid if over acos
 
       k.bid = decreaseBid(k.bid, percentageChange);
-      k.operation = "update";
     }
   });
 
@@ -906,7 +827,7 @@ const handlePerformers = (data) => {
 
 // lower bids on low ctr
 
-const handleClickless = (data) => {
+const handleLowCtr = (data) => {
   // reduce bid on targets with many impressions but low clicks
 
   const manyImpressions = 1000;
@@ -921,7 +842,7 @@ const handleClickless = (data) => {
 
   const targets = data.filter(
     (c) =>
-      c.status === "enabled" &&
+      c.state === "enabled" &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -957,7 +878,7 @@ const handleHighSpend = (data) => {
 
   const targets = data.filter(
     (c) =>
-      c.status === "enabled" &&
+      c.state === "enabled" &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -1007,7 +928,7 @@ const main = () => {
       break;
     }
 
-    case "--HighSpend": {
+    case "--lowsales": {
       lowerBidsOnLowSales(data);
 
       break;
@@ -1019,13 +940,13 @@ const main = () => {
       break;
     }
 
-    case "--clickless": {
-      handleClickless(data);
+    case "--lowctr": {
+      handleLowCtr(data);
 
       break;
     }
 
-    case "--spend": {
+    case "--highspend": {
       handleHighSpend(data);
 
       break;
@@ -1035,7 +956,7 @@ const main = () => {
       createPromotionCampaigns(data, sales);
       raiseBidsOnLowImpressions(data);
       lowerBidsOnLowSales(data);
-      handleClickless(data);
+      handleLowCtr(data);
       handleHighSpend(data);
       handlePerformers(data);
 
@@ -1043,14 +964,12 @@ const main = () => {
     }
 
     default: {
-      console.log("--auto-bid\tSet bid for auto campaigns");
-      console.log("--neg\t\tAdd negative keywords");
-      console.log("--tests\t\tCreate broad test campaigns");
+      console.log("--promote\t\tCreate test & perf campaigns from search terms");
       console.log("--impress\t\tUp bids on low impression targets");
-      console.log("--HighSpend\t\tReduce bids on high clicks with low sales");
+      console.log("--lowsales\t\tAdjust bids if high clicks but low sales");
       console.log("--performers\t\tAdjust bids based on ACOS");
-      console.log("--clickless\t\tReduce bids on low CTR");
-      console.log("--HighSpend\t\tReduce bids on high spend");
+      console.log("--lowctr\t\tReduce bids on low CTR");
+      console.log("--highspend\t\tReduce bids on high spend");
       console.log("--all\t\tProcess all");
       console.log(
         "--promote\t\tCreate test & performance campaigns from auto sales"
