@@ -20,6 +20,9 @@ const defaultPerfBid = 0.4;
 
 const targetAcos = 25;
 
+// one update per keyword
+let keywordIdsUpdated = [];
+
 // results file
 let resultsFile = 0;
 
@@ -291,19 +294,24 @@ const createDb = (data) => {
 //--------- dump as text for Excel
 
 const outputRecord = (d) => {
-  // prettier-ignore
-  const s = `${d.product}\t${d.entity}\t${d.operation}\t${d.campaignId}\t${d.adGroupId}\t${d.portfolioId}\t${d.adId}\t${d.keywordId}\t${d.productTargetingId}\t${d.campaignName}\t${d.adGroupName}\t${d.startDate}\t${d.endDate}\t${d.targetingType}\t${d.state}\t${d.dailyBudget}\t${d.sku}\t${d.asin}\t${d.adGroupDefaultBid}\t${d.bid}\t${d.keywordText}\t${d.matchType}\t${d.biddingStrategy}\t${d.placement}\t${d.percentage}\t${d.productTargetingExpression}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.sales}\t${d.orders}\t${d.units}\t${d.conversionRate}\t${d.acos}\t${d.cpc}\t${d.roas}\t${d.campaignNameInfo}\t${d.adGroupNameInfo}\t${d.campaignStateInfo}\t${d.adGroupStateInfo}\t${d.adGroupDefaultBidInfo}\t${d.resolvedProductTargetingExpressionInfo}\n`
+  if (!d.keywordId || !keywordIdsUpdated.find(x => x === d.keywordId)) {
+    // prettier-ignore
+    const s = `${d.product}\t${d.entity}\t${d.operation}\t${d.campaignId}\t${d.adGroupId}\t${d.portfolioId}\t${d.adId}\t${d.keywordId}\t${d.productTargetingId}\t${d.campaignName}\t${d.adGroupName}\t${d.startDate}\t${d.endDate}\t${d.targetingType}\t${d.state}\t${d.dailyBudget}\t${d.sku}\t${d.asin}\t${d.adGroupDefaultBid}\t${d.bid}\t${d.keywordText}\t${d.matchType}\t${d.biddingStrategy}\t${d.placement}\t${d.percentage}\t${d.productTargetingExpression}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.sales}\t${d.orders}\t${d.units}\t${d.conversionRate}\t${d.acos}\t${d.cpc}\t${d.roas}\t${d.campaignNameInfo}\t${d.adGroupNameInfo}\t${d.campaignStateInfo}\t${d.adGroupStateInfo}\t${d.adGroupDefaultBidInfo}\t${d.resolvedProductTargetingExpressionInfo}\n`
 
-  assert(resultsFile);
+    assert(resultsFile);
 
-  resultsFile.write(s);
+    resultsFile.write(s);
+
+    if (d.keywordId) {
+      keywordIdsUpdated = [...keywordIdsUpdated, d.keywordId];
+    }
+  }
 };
 const outputRecords = (db) => {
   db.forEach((d) => {
     outputRecord(d);
   });
 };
-
 
 // create new campaign
 
@@ -964,7 +972,9 @@ const main = () => {
     }
 
     default: {
-      console.log("--promote\t\tCreate test & perf campaigns from search terms");
+      console.log(
+        "--promote\t\tCreate test & perf campaigns from search terms"
+      );
       console.log("--impress\t\tUp bids on low impression targets");
       console.log("--lowsales\t\tAdjust bids if high clicks but low sales");
       console.log("--performers\t\tAdjust bids based on ACOS");
