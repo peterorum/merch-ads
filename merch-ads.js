@@ -12,9 +12,11 @@ const missingAsins = require("./data/missing-asins.json");
 
 // min & maximum allowable $bid
 const minimumBid = 0.02;
-const maximumBid = 0.6;
+const maximumBid = 0.7;
 
-const defaultBid = 0.2;
+const defaultAutoBid = 0.2;
+const defaultTestBid = 0.4;
+const defaultPerfBid = 0.4;
 
 const targetAcos = 25;
 
@@ -24,34 +26,48 @@ let resultsFile = 0;
 // for ease of creating a new record using spread operator
 
 const blank = {
-  recordId: "",
-  recordType: "",
+  product: "Sponsored Products",
+  entity: "",
+  operation: "",
   campaignId: "",
-  campaign: "",
-  campaignDailyBudget: "",
+  adGroupId: "",
   portfolioId: "",
-  campaignStartDate: "",
-  campaignEndDate: "",
-  campaignTargetingType: "",
-  adGroup: "",
-  maxBid: "",
-  keywordOrProductTargeting: "",
+  adId: "",
+  keywordId: "",
   productTargetingId: "",
-  matchType: "",
+  campaignName: "",
+  adGroupName: "",
+  startDate: "",
+  endDate: "",
+  targetingType: "",
+  state: "",
+  dailyBudget: "",
+  sku: "",
   asin: "",
-  campaignStatus: "",
-  adGroupStatus: "",
-  status: "",
+  adGroupDefaultBid: "",
+  bid: "",
+  keywordText: "",
+  matchType: "",
+  biddingStrategy: "",
+  placement: "",
+  percentage: "",
+  productTargetingExpression: "",
   impressions: 0,
   clicks: 0,
   spend: 0,
-  orders: 0,
-  totalUnits: 0,
   sales: 0,
+  orders: 0,
+  units: 0,
+  conversionRate: "",
   acos: "",
-  biddingStrategy: "",
-  placementType: "",
-  increaseBidsByPlacement: "",
+  cpc: "",
+  roas: "",
+  campaignNameInfo: "",
+  adGroupNameInfo: "",
+  campaignStateInfo: "",
+  adGroupStateInfo: "",
+  adGroupDefaultBidInfo: "",
+  resolvedProductTargetingExpressionInfo: "",
 };
 
 // load data exported from Excel as a tsv
@@ -63,75 +79,106 @@ const loadData = () => {
     .map((d) => d.split("\t"))
     .map((d) => {
       const [
-        recordId,
-        recordType,
+        product,
+        entity,
+        operation,
         campaignId,
-        campaign,
-        campaignDailyBudget,
+        adGroupId,
         portfolioId,
-        campaignStartDate,
-        campaignEndDate,
-        campaignTargetingType,
-        adGroup,
-        maxBid,
-        keywordOrProductTargeting,
+        adId,
+        keywordId,
         productTargetingId,
-        matchType,
+        campaignName,
+        adGroupName,
+        startDate,
+        endDate,
+        targetingType,
+        state,
+        dailyBudget,
+        sku,
         asin,
-        campaignStatus,
-        adGroupStatus,
-        status,
+        adGroupDefaultBid,
+        bid,
+        keywordText,
+        matchType,
+        biddingStrategy,
+        placement,
+        percentage,
+        productTargetingExpression,
         impressions,
         clicks,
         spend,
-        orders,
-        totalUnits,
         sales,
+        orders,
+        units,
+        conversionRate,
         acos,
-        biddingStrategy,
-        placementType,
-        increaseBidsByPlacement,
+        cpc,
+        roas,
+        campaignNameInfo,
+        adGroupNameInfo,
+        campaignStateInfo,
+        adGroupStateInfo,
+        adGroupDefaultBidInfo,
+        resolvedProductTargetingExpressionInfo,
       ] = d;
 
       return {
-        recordId,
-        recordType,
+        product,
+        entity,
+        operation,
         campaignId,
-        campaign,
-        campaignDailyBudget,
+        adGroupId,
         portfolioId,
-        campaignStartDate,
-        campaignEndDate,
-        campaignTargetingType,
-        adGroup,
-        maxBid,
-        keywordOrProductTargeting,
+        adId,
+        keywordId,
         productTargetingId,
-        matchType,
+        campaignName,
+        adGroupName,
+        startDate,
+        endDate,
+        targetingType,
+        state,
+        dailyBudget,
+        sku,
         asin,
-        campaignStatus,
-        adGroupStatus,
-        status,
+        adGroupDefaultBid,
+        bid,
+        keywordText,
+        matchType,
+        biddingStrategy,
+        placement,
+        percentage,
+        productTargetingExpression,
         impressions,
         clicks,
         spend,
-        orders,
-        totalUnits,
         sales,
+        orders,
+        units,
+        conversionRate,
         acos,
-        biddingStrategy,
-        placementType,
-        increaseBidsByPlacement,
+        cpc,
+        roas,
+        campaignNameInfo,
+        adGroupNameInfo,
+        campaignStateInfo,
+        adGroupStateInfo,
+        adGroupDefaultBidInfo,
+        resolvedProductTargetingExpressionInfo,
       };
     });
 
   const [headings, ...data1] = data;
 
-  // convert numeric fields
+  // convert to numeric fields
   const data2 = data1.map((d) => {
     return {
       ...d,
-      maxBid: d.maxBid ? parseFloat(d.maxBid) : d.maxBid,
+      adGroupDefaultBid: d.adGroupDefaultBid
+        ? parseFloat(d.adGroupDefaultBid)
+        : d.adGroupDefaultBid,
+      bid: d.bid ? parseFloat(d.bid) : d.bid,
       impressions: d.impressions ? parseFloat(d.impressions) : d.impressions,
       clicks: d.clicks ? parseFloat(d.clicks) : d.clicks,
       orders: d.orders ? parseFloat(d.orders) : d.orders,
@@ -227,14 +274,14 @@ const loadSales = () => {
 
 const createDb = (data) => {
   // just campaign records
-  const campaigns = data.filter((d) => d.recordType === "Campaign");
+  const campaigns = data.filter((d) => d.entity === "Campaign");
 
   // add Ad Groups under campaigns
   // TODO: don't do this - keep flat
 
   // campaigns.forEach((c) => {
   //   c.adGroups = data.filter(
-  //     (d) => d.campaign === c.campaign && d.recordType == "Ad Group"
+  //     (d) => d.campaign === c.campaign && d.entity == "Ad Group"
   //   );
   // });
 
@@ -265,21 +312,13 @@ const lowerAutoBids = (db, bid) => {
 
 const outputRecord = (d) => {
   // prettier-ignore
-  const s = `${d.recordId}\t${d.recordType}\t${d.campaignId}\t${d.campaign}\t${d.campaignDailyBudget}\t${d.portfolioId}\t${d.campaignStartDate}\t${d.campaignEndDate}\t${d.campaignTargetingType}\t${d.adGroup}\t${d.maxBid}\t${d.keywordOrProductTargeting}\t${d.productTargetingId}\t${d.matchType}\t${d.asin}\t${d.campaignStatus}\t${d.adGroupStatus}\t${d.status}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.orders}\t${d.totalUnits}\t${d.sales}\t${d.acos}%\t${d.biddingStrategy}\t${d.placementType}\t${d.increaseBidsByPlacement}\t\n`
-
-  // console.log(s);
+  const s = `${d.product}\t${d.entity}\t${d.operation}\t${d.campaignId}\t${d.adGroupId}\t${d.portfolioId}\t${d.adId}\t${d.keywordId}\t${d.productTargetingId}\t${d.campaignName}\t${d.adGroupName}\t${d.startDate}\t${d.endDate}\t${d.targetingType}\t${d.state}\t${d.dailyBudget}\t${d.sku}\t${d.asin}\t${d.adGroupDefaultBid}\t${d.bid}\t${d.keywordText}\t${d.matchType}\t${d.biddingStrategy}\t${d.placement}\t${d.percentage}\t${d.productTargetingExpression}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.sales}\t${d.orders}\t${d.units}\t${d.conversionRate}\t${d.acos}\t${d.cpc}\t${d.roas}\t${d.campaignNameInfo}\t${d.adGroupNameInfo}\t${d.campaignStateInfo}\t${d.adGroupStateInfo}\t${d.adGroupDefaultBidInfo}\t${d.resolvedProductTargetingExpressionInfo}\n`
 
   assert(resultsFile);
 
   resultsFile.write(s);
 };
 const outputRecords = (db) => {
-  // db.forEach((d) => {
-  //   d.adGroups.forEach((ag) => {
-  //     outputRecord(ag);
-  //   });
-  // });
-
   db.forEach((d) => {
     outputRecord(d);
   });
@@ -288,7 +327,7 @@ const outputRecords = (db) => {
 //--------- add negative keywords
 
 const addNegativeKeywords = (data, niche, wordFile) => {
-  const campaigns = data.filter((d) => d.recordType === "Campaign");
+  const campaigns = data.filter((d) => d.entity === "Campaign");
   let autoCampaigns = db.filter((d) => d.campaignTargetingType === "Auto");
 
   if (niche) {
@@ -309,7 +348,7 @@ const addNegativeKeywords = (data, niche, wordFile) => {
     words.forEach((word) => {
       const keywordRecord = {
         recordId: "",
-        recordType: "Keyword",
+        entity: "Keyword",
         campaignId: campaign.campaignId,
         campaign: campaign.campaign,
         campaignDailyBudget: "",
@@ -319,13 +358,13 @@ const addNegativeKeywords = (data, niche, wordFile) => {
         campaignTargetingType: "",
         adGroup: "",
         maxBid: "",
-        keywordOrProductTargeting: word,
+        keywordText: word,
         productTargetingId: "",
-        matchType: "campaign negative exact",
+        matchType: "negativeExact",
         asin: "",
-        campaignStatus: "enabled",
-        adGroupStatus: "",
-        status: "enabled",
+        campaignState: "enabled",
+        adGroupState: "",
+        state: "enabled",
         impressions: 0,
         clicks: 0,
         spend: 0,
@@ -354,11 +393,11 @@ const createManualCampaign = (name, portfolioId) => {
   records.push({
     ...blank,
     campaign: name,
-    recordType: "Campaign",
+    entity: "Campaign",
     campaignDailyBudget: "5",
     portfolioId: portfolioId,
     campaignTargetingType: "Manual",
-    campaignStatus: "enabled",
+    campaignState: "enabled",
     biddingStrategy: "Dynamic bidding (down only)",
     placementType: "All",
   });
@@ -367,7 +406,7 @@ const createManualCampaign = (name, portfolioId) => {
   records.push({
     ...blank,
     campaign: name,
-    recordType: "Campaign By Placement",
+    entity: "Campaign By Placement",
     placementType: "Top of search (page 1)",
     increaseBidsByPlacement: "10%",
   });
@@ -375,7 +414,7 @@ const createManualCampaign = (name, portfolioId) => {
   records.push({
     ...blank,
     campaign: name,
-    recordType: "Campaign By Placement",
+    entity: "Campaign By Placement",
     placementType: "Rest of search",
     increaseBidsByPlacement: "",
   });
@@ -383,7 +422,7 @@ const createManualCampaign = (name, portfolioId) => {
   records.push({
     ...blank,
     campaign: name,
-    recordType: "Campaign By Placement",
+    entity: "Campaign By Placement",
     placementType: "Product pages",
     increaseBidsByPlacement: "0%",
   });
@@ -404,14 +443,14 @@ const createNewKeywordRecords = (
     ...newCampaign,
     {
       ...blank,
-      recordType: "Keyword",
+      entity: "Keyword",
+      operation: "create",
       campaign: newCampaignName,
       adGroup,
-      keywordOrProductTargeting: customerSearchTerm,
+      keywordText: customerSearchTerm,
       matchType: adGroup.toLowerCase(),
-      campaignStatus: "enabled",
-      adGroupStatus: "enabled",
-      status: "enabled",
+      bid: defaultAutoBid,
+      state: "enabled",
     },
   ];
 
@@ -420,16 +459,13 @@ const createNewKeywordRecords = (
     ...newCampaign,
     {
       ...blank,
-      recordType: "Keyword",
+      entity: "Keyword",
+      operation: "create",
       campaignId: autoCampaign.campaignId,
       campaign: autoCampaign.campaign,
-      keywordOrProductTargeting: customerSearchTerm,
-      matchType:
-        adGroup === "Exact"
-          ? "campaign negative exact"
-          : "campaign negative phrase",
-      campaignStatus: "enabled",
-      status: "enabled",
+      keywordText: customerSearchTerm,
+      matchType: adGroup === "Exact" ? "negativeExact" : "negativePhrase",
+      state: "enabled",
     },
   ];
 
@@ -439,173 +475,15 @@ const createNewKeywordRecords = (
       ...newCampaign,
       {
         ...blank,
-        recordType: "Keyword",
+        entity: "Keyword",
         campaign: newCampaignName,
-        keywordOrProductTargeting: customerSearchTerm,
-        matchType: "campaign negative exact",
-        campaignStatus: "enabled",
-        status: "enabled",
+        keywordText: customerSearchTerm,
+        matchType: "negativeExact",
+        state: "enabled",
       },
     ];
   }
   return newCampaign;
-};
-
-//--------- create broad test campaigns from current manual campaigns
-
-const createTestCampaigns = (data) => {
-  const campaigns = data.filter((d) => d.recordType === "Campaign");
-  let manualCampaigns = campaigns.filter(
-    (d) => d.campaignTargetingType === "Manual"
-  );
-
-  const generalNegatives = fs
-    .readFileSync("data/negative/all.txt")
-    .toString()
-    .split("\n");
-
-  // for each campaign, create a broad campaign from its negative keywords
-
-  let newCampaigns = [];
-
-  manualCampaigns.forEach((campaign) => {
-    const keywords = data.filter(
-      (c) => (c.campaignId === campaign.campaignId) & (c.matchType === "exact")
-    );
-
-    if (keywords.length) {
-      const testCampaignName = campaign.campaign.replace(/M$/, "T");
-
-      let newCampaign = createManualCampaign(
-        testCampaignName,
-        campaign.portfolioId
-      );
-
-      // adgroup
-      newCampaign.push({
-        ...blank,
-        recordType: "Ad Group",
-        campaign: testCampaignName,
-        adGroup: "Broad",
-        maxBid: "0.20",
-        campaignStatus: "enabled",
-        adGroupStatus: "enabled",
-      });
-
-      // ad
-
-      const asin = data.find(
-        (c) => c.campaignId === campaign.campaignId && c.recordType === "Ad"
-      ).asin;
-
-      newCampaign.push({
-        ...blank,
-        recordType: "Ad",
-        campaign: testCampaignName,
-        adGroup: "Broad",
-        asin,
-        campaignStatus: "enabled",
-        adGroupStatus: "enabled",
-        status: "enabled",
-      });
-
-      keywords.forEach((k) => {
-        // add as broad
-
-        newCampaign = [
-          ...newCampaign,
-          {
-            ...blank,
-            recordType: "Keyword",
-            campaign: testCampaignName,
-            keywordOrProductTargeting: k.keywordOrProductTargeting,
-            matchType: "broad",
-            campaignStatus: "enabled",
-            adGroupStatus: "enabled",
-            status: "enabled",
-          },
-        ];
-
-        // also add as negative exact
-
-        newCampaign = [
-          ...newCampaign,
-          {
-            ...blank,
-            recordType: "Keyword",
-            campaign: testCampaignName,
-            keywordOrProductTargeting: k.keywordOrProductTargeting,
-            matchType: "campaign negative exact",
-            campaignStatus: "enabled",
-            status: "enabled",
-          },
-        ];
-
-        // add general negatives
-
-        generalNegatives.forEach((neg) => {
-          newCampaign = [
-            ...newCampaign,
-            {
-              ...blank,
-              recordType: "Keyword",
-              campaign: testCampaignName,
-              keywordOrProductTargeting: neg,
-              matchType: "campaign negative exact",
-              campaignStatus: "enabled",
-              status: "enabled",
-            },
-          ];
-        });
-      });
-
-      // add to all new campaigns
-
-      newCampaigns = [...newCampaigns, ...newCampaign];
-
-      // also add as phrase and negative to associated auto campaign
-
-      keywords.forEach((k) => {
-        const autoCampaign = data.find(
-          (c) =>
-            c.campaignTargetingType === "Auto" &&
-            c.campaign.startsWith(campaign.campaign.replace(/ [KM]$/, ""))
-        );
-
-        if (!autoCampaign) {
-          console.error(`No auto campaign found for ${campaign.campaign}`);
-          exit(1);
-        }
-
-        // todo: limit exact to 10 words
-
-        newCampaigns.push({
-          ...blank,
-          recordType: "Keyword",
-          campaignId: autoCampaign.campaignId,
-          campaign: autoCampaign.campaign,
-          keywordOrProductTargeting: k.keywordOrProductTargeting,
-          matchType: "campaign negative exact",
-          campaignStatus: "enabled",
-          status: "enabled",
-        });
-
-        // todo: limit broad to 4 words
-        newCampaigns.push({
-          ...blank,
-          recordType: "Keyword",
-          campaignId: autoCampaign.campaignId,
-          campaign: autoCampaign.campaign,
-          keywordOrProductTargeting: k.keywordOrProductTargeting,
-          matchType: "campaign negative phrase",
-          campaignStatus: "enabled",
-          status: "enabled",
-        });
-      });
-    }
-  });
-
-  outputRecords(newCampaigns);
 };
 
 //--------- create a new test or perf campaign
@@ -627,24 +505,23 @@ const createNewKeywordCampaign = ({
   // add adgroup
   newCampaign.push({
     ...blank,
-    recordType: "Ad Group",
+    operation: "create",
+    entity: "Ad Group",
     campaign: newCampaignName,
     adGroup,
-    maxBid: bid,
-    campaignStatus: "enabled",
-    adGroupStatus: "enabled",
+    adGroupDefaultBid: bid,
+    state: "enabled",
   });
 
   // add ad
   newCampaign.push({
     ...blank,
-    recordType: "Ad",
+    entity: "Product Ad",
+    operation: "create",
     campaign: newCampaignName,
     adGroup,
     asin,
-    campaignStatus: "enabled",
-    adGroupStatus: "enabled",
-    status: "enabled",
+    state: "enabled",
   });
 
   // add keyword
@@ -663,12 +540,12 @@ const createNewKeywordCampaign = ({
       ...newCampaign,
       {
         ...blank,
-        recordType: "Keyword",
+        entity: "Keyword",
+        operation: "create",
         campaign: newCampaignName,
-        keywordOrProductTargeting: neg,
-        matchType: "campaign negative exact",
-        campaignStatus: "enabled",
-        status: "enabled",
+        keywordText: neg,
+        matchType: "negativeExact",
+        state: "enabled",
       },
     ];
   });
@@ -685,7 +562,7 @@ const createNewKeywordCampaign = ({
 // 5. Add as exact to Perf. 0.4
 
 const createPromotionCampaigns = (data, sales) => {
-  const allCampaigns = data.filter((d) => d.recordType === "Campaign");
+  const allCampaigns = data.filter((d) => d.entity === "Campaign");
 
   const autoCampaigns = allCampaigns.filter(
     (d) => d.campaignTargetingType === "Auto"
@@ -713,7 +590,7 @@ const createPromotionCampaigns = (data, sales) => {
 
   const autoCampaignsWithOrders = campaignsWithOrders.filter((co) =>
     autoCampaigns.find(
-      (ac) => ac.campaign === co.campaignName && ac.campaignStatus === "enabled"
+      (ac) => ac.campaign === co.campaignName && ac.state === "enabled"
     )
   );
 
@@ -733,7 +610,7 @@ const createPromotionCampaigns = (data, sales) => {
     // assumes single asin campaigns
 
     let asin = data.find(
-      (c) => c.campaign === co.campaignName && c.recordType === "Ad"
+      (c) => c.campaign === co.campaignName && c.entity === "Ad"
     ).asin;
 
     if (!asin) {
@@ -771,7 +648,7 @@ const createPromotionCampaigns = (data, sales) => {
         asin,
         generalNegatives,
         customerSearchTerm: co.customerSearchTerm,
-        bid: "0.2",
+        bid: defaultTestBid,
       });
 
       newCampaigns = [...newCampaigns, ...testCampaign];
@@ -783,8 +660,8 @@ const createPromotionCampaigns = (data, sales) => {
         !data.find(
           (d) =>
             !allCampaigns.find((c) => testRegex.test(d.campaign)) &&
-            d.recordType === "Keyword" &&
-            d.keywordOrProductTargeting === co.customerSearchTerm
+            d.entity === "Keyword" &&
+            d.keywordText === co.customerSearchTerm
         )
       ) {
         console.log(
@@ -832,7 +709,7 @@ const createPromotionCampaigns = (data, sales) => {
         asin,
         generalNegatives,
         customerSearchTerm: co.customerSearchTerm,
-        bid: "0.4",
+        bid: defaultPerfBid,
       });
 
       newCampaigns = [...newCampaigns, ...perfCampaign];
@@ -844,7 +721,7 @@ const createPromotionCampaigns = (data, sales) => {
         !data.find(
           (d) =>
             !allCampaigns.find((c) => perfRegex.test(d.campaign)) &&
-            d.keywordOrProductTargeting === co.customerSearchTerm
+            d.keywordText === co.customerSearchTerm
         )
       ) {
         console.log(
@@ -872,7 +749,7 @@ const createPromotionCampaigns = (data, sales) => {
 // up the bid by a percentage
 
 const increaseBid = (bid, percentage) => {
-  const bid1 = 100 * (bid || defaultBid);
+  const bid1 = 100 * (bid || defaultAutoBid);
 
   const newBid = Math.ceil(bid1 + (bid1 * percentage) / 100);
 
@@ -882,7 +759,7 @@ const increaseBid = (bid, percentage) => {
 // up the bid by a percentage
 
 const decreaseBid = (bid, percentage) => {
-  const bid1 = 100 * (bid || defaultBid);
+  const bid1 = 100 * (bid || defaultAutoBid);
 
   const newBid = Math.floor(bid1 - (bid1 * percentage) / 100);
 
@@ -902,7 +779,7 @@ const raiseBidsOnLowImpressions = (data) => {
   const percentageIncrease = 10;
 
   const allCampaigns = data.filter(
-    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+    (d) => d.entity === "Campaign" && d.state === "enabled"
   );
 
   const oldCampaigns = allCampaigns.filter(
@@ -919,14 +796,14 @@ const raiseBidsOnLowImpressions = (data) => {
     (c) =>
       c.status === "enabled" &&
       // keyword
-      ((c.recordType === "Keyword" &&
+      ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
         // auto
-        (c.recordType === "Product Targeting" &&
-          (c.keywordOrProductTargeting === "close-match" ||
-            c.keywordOrProductTargeting === "loose-match" ||
-            c.keywordOrProductTargeting === "complements" ||
-            c.keywordOrProductTargeting === "substitutes"))) &&
+        (c.entity === "Product Targeting" &&
+          (c.keywordText === "close-match" ||
+            c.keywordText === "loose-match" ||
+            c.keywordText === "complements" ||
+            c.keywordText === "substitutes"))) &&
       c.impressions < fewImpressions &&
       oldCampaigns.find((oc) => oc.campaign === c.campaign)
   );
@@ -948,7 +825,7 @@ const lowerBidsOnLowSales = (data) => {
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
-    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+    (d) => d.entity === "Campaign" && d.state === "enabled"
   );
 
   // find keyword targets with clicks but no orders
@@ -957,14 +834,14 @@ const lowerBidsOnLowSales = (data) => {
     (c) =>
       c.status === "enabled" &&
       // keyword
-      ((c.recordType === "Keyword" &&
+      ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
         // auto
-        (c.recordType === "Product Targeting" &&
-          (c.keywordOrProductTargeting === "close-match" ||
-            c.keywordOrProductTargeting === "loose-match" ||
-            c.keywordOrProductTargeting === "complements" ||
-            c.keywordOrProductTargeting === "substitutes"))) &&
+        (c.entity === "Product Targeting" &&
+          (c.productTargetingExpression === "close-match" ||
+            c.productTargetingExpression === "loose-match" ||
+            c.productTargetingExpression === "complements" ||
+            c.productTargetingExpression === "substitutes"))) &&
       // no sales
       ((c.orders === 0 && c.clicks >= zeroSalesManyClicks) ||
         // 1 sale & bad acos & more clicks
@@ -974,19 +851,8 @@ const lowerBidsOnLowSales = (data) => {
   );
 
   keywords.forEach((k) => {
-    const newBid = decreaseBid(k.maxBid, percentageDecrease);
-
-    k.maxBid = newBid;
-
-    // // pause if hits minimum
-    // if (newBid <= minimumBid) {
-    //   k.status = "paused";
-    //   console.log(
-    //     "Paused: High Clicks, Low Sales",
-    //     k.campaign,
-    //     k.keywordOrProductTargeting
-    //   );
-    // }
+    k.bid = decreaseBid(k.bid, percentageDecrease);
+    k.operation = "update";
   });
 
   outputRecords(keywords);
@@ -1001,7 +867,7 @@ const handlePerformers = (data) => {
   const percentageChange = 10;
 
   const allCampaigns = data.filter(
-    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+    (d) => d.entity === "Campaign" && d.state === "enabled"
   );
 
   // find keyword targets with enough orders
@@ -1009,14 +875,14 @@ const handlePerformers = (data) => {
   const targets = data.filter(
     (c) =>
       // keyword
-      ((c.recordType === "Keyword" &&
+      ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
         // auto
-        (c.recordType === "Product Targeting" &&
-          (c.keywordOrProductTargeting === "close-match" ||
-            c.keywordOrProductTargeting === "loose-match" ||
-            c.keywordOrProductTargeting === "complements" ||
-            c.keywordOrProductTargeting === "substitutes"))) &&
+        (c.entity === "Product Targeting" &&
+          (c.productTargetingExpression === "close-match" ||
+            c.productTargetingExpression === "loose-match" ||
+            c.productTargetingExpression === "complements" ||
+            c.productTargetingExpression === "substitutes"))) &&
       c.orders >= minOrders
   );
 
@@ -1030,19 +896,8 @@ const handlePerformers = (data) => {
     } else {
       // decrease bid if over acos
 
-      const newBid = decreaseBid(k.maxBid, percentageChange);
-
-      k.maxBid = newBid;
-
-      // // pause if hits minimum
-      // if (newBid <= minimumBid) {
-      //   k.status = "paused";
-      //   console.log(
-      //     "Paused: High ACoS",
-      //     k.campaign,
-      //     k.keywordOrProductTargeting
-      //   );
-      // }
+      k.bid = decreaseBid(k.bid, percentageChange);
+      k.operation = "update";
     }
   });
 
@@ -1059,41 +914,30 @@ const handleClickless = (data) => {
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
-    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+    (d) => d.entity === "Campaign" && d.state === "enabled"
   );
 
   // find targets with few impressions
 
   const targets = data.filter(
     (c) =>
-    c.status === 'enabled' &&
+      c.status === "enabled" &&
       // keyword
-      ((c.recordType === "Keyword" &&
+      ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
         // auto
-        (c.recordType === "Product Targeting" &&
-          (c.keywordOrProductTargeting === "close-match" ||
-            c.keywordOrProductTargeting === "loose-match" ||
-            c.keywordOrProductTargeting === "complements" ||
-            c.keywordOrProductTargeting === "substitutes"))) &&
+        (c.entity === "Product Targeting" &&
+          (c.productTargetingExpression === "close-match" ||
+            c.productTargetingExpression === "loose-match" ||
+            c.productTargetingExpression === "complements" ||
+            c.productTargetingExpression === "substitutes"))) &&
       c.impressions >= manyImpressions &&
       c.clicks / c.impressions < lowCtr
   );
 
   targets.forEach((k) => {
-    const newBid = decreaseBid(k.maxBid, percentageDecrease);
-
-    k.maxBid = newBid;
-
-    // // pause if hits minimum
-    // if (newBid <= minimumBid) {
-    //   k.status = "paused";
-    //   console.log(
-    //     "Paused: High Impressions, Low CTR",
-    //     k.campaign,
-    //     k.keywordOrProductTargeting
-    //   );
-    // }
+    k.bid = decreaseBid(k.bid, percentageDecrease);
+    k.operation = "update";
   });
 
   outputRecords(targets);
@@ -1102,46 +946,34 @@ const handleClickless = (data) => {
 // lower bids on high spenders withot sales
 
 const handleHighSpend = (data) => {
-
   const maxSpend = 5;
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
-    (d) => d.recordType === "Campaign" && d.campaignStatus === "enabled"
+    (d) => d.entity === "Campaign" && d.state === "enabled"
   );
 
   // find targets with high spend
 
   const targets = data.filter(
     (c) =>
-    c.status === 'enabled' &&
+      c.status === "enabled" &&
       // keyword
-      ((c.recordType === "Keyword" &&
+      ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
         // auto
-        (c.recordType === "Product Targeting" &&
-          (c.keywordOrProductTargeting === "close-match" ||
-            c.keywordOrProductTargeting === "loose-match" ||
-            c.keywordOrProductTargeting === "complements" ||
-            c.keywordOrProductTargeting === "substitutes"))) &&
+        (c.entity === "Product Targeting" &&
+          (c.productTargetingExpression === "close-match" ||
+            c.productTargetingExpression === "loose-match" ||
+            c.productTargetingExpression === "complements" ||
+            c.productTargetingExpression === "substitutes"))) &&
       c.spend >= maxSpend &&
       c.orders === 0
   );
 
   targets.forEach((k) => {
-    const newBid = decreaseBid(k.maxBid, percentageDecrease);
-
-    k.maxBid = newBid;
-
-    // // pause if hits minimum
-    // if (newBid <= minimumBid) {
-    //   k.status = "paused";
-    //   console.log(
-    //     "Paused: High Impressions, Low CTR",
-    //     k.campaign,
-    //     k.keywordOrProductTargeting
-    //   );
-    // }
+    k.bid = decreaseBid(k.bid, percentageDecrease);
+    k.operation = "update";
   });
 
   outputRecords(targets);
@@ -1163,12 +995,6 @@ const main = () => {
   const db = createDb(data);
 
   switch (argv[2]) {
-    case "--tests": {
-      createTestCampaigns(data);
-
-      break;
-    }
-
     case "--promote": {
       createPromotionCampaigns(data, sales);
 
