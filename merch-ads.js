@@ -2,7 +2,7 @@ const { log, assert } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
 
-const { differenceInDays, parse } = require("date-fns");
+const { differenceInDays, parse, format } = require("date-fns");
 
 // tab-separated files
 const dataFile = "data/data.txt";
@@ -51,7 +51,7 @@ const blank = {
   bid: "",
   keywordText: "",
   matchType: "",
-  biddingStrategy: "Dynamic bids - down only",
+  biddingStrategy: "",
   placement: "",
   percentage: "",
   productTargetingExpression: "",
@@ -273,28 +273,10 @@ const loadSales = () => {
   return sales2;
 };
 
-// create database array indexed by campaign name
-
-const createDb = (data) => {
-  // just campaign records
-  const campaigns = data.filter((d) => d.entity === "Campaign");
-
-  // add Ad Groups under campaigns
-  // TODO: don't do this - keep flat
-
-  // campaigns.forEach((c) => {
-  //   c.adGroups = data.filter(
-  //     (d) => d.campaign === c.campaign && d.entity == "Ad Group"
-  //   );
-  // });
-
-  return campaigns;
-};
-
 //--------- dump as text for Excel
 
 const outputRecord = (d) => {
-  if (!d.keywordId || !keywordIdsUpdated.find(x => x === d.keywordId)) {
+  if (!d.keywordId || !keywordIdsUpdated.find((x) => x === d.keywordId)) {
     // prettier-ignore
     const s = `${d.product}\t${d.entity}\t${d.operation}\t${d.campaignId}\t${d.adGroupId}\t${d.portfolioId}\t${d.adId}\t${d.keywordId}\t${d.productTargetingId}\t${d.campaignName}\t${d.adGroupName}\t${d.startDate}\t${d.endDate}\t${d.targetingType}\t${d.state}\t${d.dailyBudget}\t${d.sku}\t${d.asin}\t${d.adGroupDefaultBid}\t${d.bid}\t${d.keywordText}\t${d.matchType}\t${d.biddingStrategy}\t${d.placement}\t${d.percentage}\t${d.productTargetingExpression}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.sales}\t${d.orders}\t${d.units}\t${d.conversionRate}\t${d.acos}\t${d.cpc}\t${d.roas}\t${d.campaignNameInfo}\t${d.adGroupNameInfo}\t${d.campaignStateInfo}\t${d.adGroupStateInfo}\t${d.adGroupDefaultBidInfo}\t${d.resolvedProductTargetingExpressionInfo}\n`
 
@@ -321,39 +303,16 @@ const createManualCampaign = (name, portfolioId) => {
   // header
   records.push({
     ...blank,
-    campaign: name,
+    campaignId: name,
+    campaignName: name,
     entity: "Campaign",
-    campaignDailyBudget: "5",
+    operation: "create",
+    dailyBudget: "5",
     portfolioId: portfolioId,
-    campaignTargetingType: "Manual",
-    campaignState: "enabled",
-    biddingStrategy: "Dynamic bidding (down only)",
-    placementType: "All",
-  });
-
-  // placement
-  records.push({
-    ...blank,
-    campaign: name,
-    entity: "Campaign By Placement",
-    placementType: "Top of search (page 1)",
-    increaseBidsByPlacement: "10%",
-  });
-
-  records.push({
-    ...blank,
-    campaign: name,
-    entity: "Campaign By Placement",
-    placementType: "Rest of search",
-    increaseBidsByPlacement: "",
-  });
-
-  records.push({
-    ...blank,
-    campaign: name,
-    entity: "Campaign By Placement",
-    placementType: "Product pages",
-    increaseBidsByPlacement: "0%",
+    targetingType: "MANUAL",
+    state: "enabled",
+    biddingStrategy: "Dynamic bids - down only",
+    // startDate: format(new Date(), "yyyyMMdd"),
   });
 
   return records;
@@ -366,7 +325,8 @@ const createNewKeywordRecords = (
   newCampaignName,
   adGroup,
   customerSearchTerm,
-  autoCampaign
+  autoCampaign,
+  bid
 ) => {
   newCampaign = [
     ...newCampaign,
@@ -374,11 +334,11 @@ const createNewKeywordRecords = (
       ...blank,
       entity: "Keyword",
       operation: "create",
-      campaign: newCampaignName,
-      adGroup,
+      campaignId: newCampaignName,
+      adGroupId: adGroup,
       keywordText: customerSearchTerm,
       matchType: adGroup.toLowerCase(),
-      bid: defaultAutoBid,
+      bid,
       state: "enabled",
     },
   ];
@@ -388,10 +348,9 @@ const createNewKeywordRecords = (
     ...newCampaign,
     {
       ...blank,
-      entity: "Keyword",
+      entity: "Campaign Negative Keyword",
       operation: "create",
       campaignId: autoCampaign.campaignId,
-      campaign: autoCampaign.campaign,
       keywordText: customerSearchTerm,
       matchType: adGroup === "Exact" ? "negativeExact" : "negativePhrase",
       state: "enabled",
@@ -404,8 +363,9 @@ const createNewKeywordRecords = (
       ...newCampaign,
       {
         ...blank,
-        entity: "Keyword",
-        campaign: newCampaignName,
+        entity: "Campaign Negative Keyword",
+        operation: "create",
+        campaignId: newCampaignName,
         keywordText: customerSearchTerm,
         matchType: "negativeExact",
         state: "enabled",
@@ -420,7 +380,7 @@ const createNewKeywordRecords = (
 const createNewKeywordCampaign = ({
   newCampaignName,
   autoCampaign,
-  adGroup, // Broad or Exact
+  adGroupName, // Broad or Exact
   asin,
   generalNegatives,
   customerSearchTerm,
@@ -436,8 +396,9 @@ const createNewKeywordCampaign = ({
     ...blank,
     operation: "create",
     entity: "Ad Group",
-    campaign: newCampaignName,
-    adGroup,
+    campaignId: newCampaignName,
+    adGroupId: adGroupName,
+    adGroupName,
     adGroupDefaultBid: bid,
     state: "enabled",
   });
@@ -447,8 +408,8 @@ const createNewKeywordCampaign = ({
     ...blank,
     entity: "Product Ad",
     operation: "create",
-    campaign: newCampaignName,
-    adGroup,
+    campaignId: newCampaignName,
+    adGroupId: adGroupName,
     asin,
     state: "enabled",
   });
@@ -457,27 +418,14 @@ const createNewKeywordCampaign = ({
   newCampaign = createNewKeywordRecords(
     newCampaign,
     newCampaignName,
-    adGroup,
+    adGroupName,
     customerSearchTerm,
-    autoCampaign
+    autoCampaign,
+    bid
   );
 
-  // add general negatives
-
-  generalNegatives.forEach((neg) => {
-    newCampaign = [
-      ...newCampaign,
-      {
-        ...blank,
-        entity: "Keyword",
-        operation: "create",
-        campaign: newCampaignName,
-        keywordText: neg,
-        matchType: "negativeExact",
-        state: "enabled",
-      },
-    ];
-  });
+  // add general negatives (really only for auto camaigns)
+  // newCampaign = addGeneralNegatives( generalNegatives, newCampaign, newCampaignName );
 
   return newCampaign;
 };
@@ -493,9 +441,7 @@ const createNewKeywordCampaign = ({
 const createPromotionCampaigns = (data, sales) => {
   const allCampaigns = data.filter((d) => d.entity === "Campaign");
 
-  const autoCampaigns = allCampaigns.filter(
-    (d) => d.campaignTargetingType === "Auto"
-  );
+  const autoCampaigns = allCampaigns.filter((d) => d.targetingType === "AUTO");
 
   const generalNegatives = fs
     .readFileSync("data/negative/all.txt")
@@ -519,7 +465,7 @@ const createPromotionCampaigns = (data, sales) => {
 
   const autoCampaignsWithOrders = campaignsWithOrders.filter((co) =>
     autoCampaigns.find(
-      (ac) => ac.campaign === co.campaignName && ac.state === "enabled"
+      (ac) => ac.campaignName === co.campaignName && ac.state === "enabled"
     )
   );
 
@@ -530,7 +476,7 @@ const createPromotionCampaigns = (data, sales) => {
 
   autoCampaignsWithOrders.forEach((co) => {
     const autoCampaign = allCampaigns.find(
-      (c) => c.campaign === co.campaignName
+      (c) => c.campaignName === co.campaignName
     );
 
     const baseCampaignName = co.campaignName.replace(/( Auto)|( A)$/, "");
@@ -539,7 +485,7 @@ const createPromotionCampaigns = (data, sales) => {
     // assumes single asin campaigns
 
     let asin = data.find(
-      (c) => c.campaign === co.campaignName && c.entity === "Ad"
+      (c) => c.campaignNameInfo === co.campaignName && c.entity === "Product Ad"
     ).asin;
 
     if (!asin) {
@@ -573,7 +519,7 @@ const createPromotionCampaigns = (data, sales) => {
       const testCampaign = createNewKeywordCampaign({
         newCampaignName: newTestCampaignName,
         autoCampaign,
-        adGroup: "Broad",
+        adGroupName: "Broad",
         asin,
         generalNegatives,
         customerSearchTerm: co.customerSearchTerm,
@@ -604,7 +550,8 @@ const createPromotionCampaigns = (data, sales) => {
           newTestCampaignName,
           "Broad",
           co.customerSearchTerm,
-          autoCampaign
+          autoCampaign,
+          defaultTestBid
         );
 
         newCampaigns = [...newCampaigns, ...newKeywordRecords];
@@ -634,7 +581,7 @@ const createPromotionCampaigns = (data, sales) => {
       const perfCampaign = createNewKeywordCampaign({
         newCampaignName: newPerfCampaignName,
         autoCampaign,
-        adGroup: "Exact",
+        adGroupName: "Exact",
         asin,
         generalNegatives,
         customerSearchTerm: co.customerSearchTerm,
@@ -664,7 +611,8 @@ const createPromotionCampaigns = (data, sales) => {
           newPerfCampaignName,
           "Exact",
           co.customerSearchTerm,
-          autoCampaign
+          autoCampaign,
+          defaultPerfBid
         );
 
         newCampaigns = [...newCampaigns, ...newKeywordRecords];
@@ -693,6 +641,31 @@ const decreaseBid = (bid, percentage) => {
   const newBid = Math.floor(bid1 - (bid1 * percentage) / 100);
 
   return Math.max(newBid / 100, minimumBid);
+};
+
+// add general negatives to a campaign
+
+const addGeneralNegatives = (
+  generalNegatives,
+  newCampaign,
+  newCampaignName
+) => {
+  generalNegatives.forEach((neg) => {
+    newCampaign = [
+      ...newCampaign,
+      {
+        ...blank,
+        entity: "Campaign Negative Keyword",
+        operation: "create",
+        campaignId: newCampaignName,
+        keywordText: neg,
+        matchType: "negativeExact",
+        state: "enabled",
+      },
+    ];
+  });
+
+  return newCampaign;
 };
 
 // raise bids on low impression targets
@@ -734,7 +707,7 @@ const raiseBidsOnLowImpressions = (data) => {
             c.keywordText === "complements" ||
             c.keywordText === "substitutes"))) &&
       c.impressions < fewImpressions &&
-      oldCampaigns.find((oc) => oc.campaign === c.campaign)
+      oldCampaigns.find((oc) => oc.campaignName === c.campaign)
   );
 
   keywords.forEach((k) => {
@@ -920,8 +893,6 @@ const main = () => {
   outputRecord(headings);
 
   const sales = loadSales();
-
-  const db = createDb(data);
 
   switch (argv[2]) {
     case "--promote": {
