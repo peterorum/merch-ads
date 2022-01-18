@@ -313,7 +313,7 @@ const createManualCampaign = (name, portfolioId) => {
     targetingType: "MANUAL",
     state: "enabled",
     biddingStrategy: "Dynamic bids - down only",
-    // startDate: format(sub(new Date(), {days: 1}), 'yyyyMMdd'), // US date still yesterday
+    startDate: format(sub(new Date(), {days: 1}), 'yyyyMMdd'), // US date still yesterday
   });
 
   return records;
@@ -378,14 +378,15 @@ const createNewKeywordRecords = (
 
 //--------- add keywords
 
-const createNewProductRecords = (
+const createNewProductRecords = ({
   newCampaign,
   newCampaignName,
-  adGroup,
+  adGroupName,
   customerSearchTerm,
   autoCampaign,
-  bid
-) => {
+  autoAdGroupId,
+  bid,
+}) => {
   newCampaign = [
     ...newCampaign,
     {
@@ -393,7 +394,7 @@ const createNewProductRecords = (
       entity: "Product Targeting",
       operation: "create",
       campaignId: newCampaignName,
-      adGroupId: adGroup,
+      adGroupId: adGroupName,
       productTargetingExpression: `asin="${customerSearchTerm}"`,
       bid,
       state: "enabled",
@@ -409,6 +410,7 @@ const createNewProductRecords = (
       entity: "Negative Product Targeting",
       operation: "create",
       campaignId: autoCampaign.campaignId,
+      adGroupId: autoAdGroupId,
       productTargetingExpression: `asin="${customerSearchTerm}"`,
       state: "enabled",
     },
@@ -471,6 +473,7 @@ const createNewKeywordCampaign = ({
 const createNewProductCampaign = ({
   newCampaignName,
   autoCampaign,
+  autoAdGroupId,
   adGroupName, // Product
   asin,
   customerSearchTerm, // asin
@@ -505,14 +508,15 @@ const createNewProductCampaign = ({
   });
 
   // add product
-  newCampaign = createNewProductRecords(
+  newCampaign = createNewProductRecords({
     newCampaign,
     newCampaignName,
     adGroupName,
     customerSearchTerm,
     autoCampaign,
-    bid
-  );
+    autoAdGroupId,
+    bid,
+  });
 
   return newCampaign;
 };
@@ -600,7 +604,6 @@ const createKeywordPromotionCampaigns = (data, sales) => {
       );
 
       newTestCampaigns.push(baseCampaignName);
-
 
       const testCampaign = createNewKeywordCampaign({
         newCampaignName: newTestCampaignName,
@@ -722,9 +725,7 @@ const createProductPromotionCampaigns = (data, sales) => {
   // just product orders
 
   let campaignsWithOrders = sales.filter(
-    (s) =>
-      s.orders > 0 &&
-      /^b[a-z0-9]{9}$/.test(s.customerSearchTerm)
+    (s) => s.orders > 0 && /^b[a-z0-9]{9}$/.test(s.customerSearchTerm)
   );
 
   let newCampaigns = [];
@@ -748,7 +749,11 @@ const createProductPromotionCampaigns = (data, sales) => {
 
     const baseCampaignName = co.campaignName.replace(/ Auto$/, "");
 
-    // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
+    const autoAdGroupId = data.find(
+      (x) => x.entity === "Ad Group" && x.campaignId === autoCampaign.campaignId
+    ).adGroupId;
+
+    // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
     // assumes single asin campaigns
 
     let asin = data.find(
@@ -789,6 +794,7 @@ const createProductPromotionCampaigns = (data, sales) => {
       const perfCampaign = createNewProductCampaign({
         newCampaignName: newProdCampaignName,
         autoCampaign,
+        autoAdGroupId,
         adGroupName: "Product",
         asin,
         customerSearchTerm: co.customerSearchTerm,
@@ -813,14 +819,15 @@ const createProductPromotionCampaigns = (data, sales) => {
           co.customerSearchTerm
         );
 
-        const newProductRecords = createNewProductRecords(
-          [],
-          newProdCampaignName,
-          "Product",
-          co.customerSearchTerm,
+        const newProductRecords = createNewProductRecords({
+          newCampaign: [],
+          newCampaignName,
+          adGroup: "Product",
+          customerSearchTerm: co.customerSearchTerm,
           autoCampaign,
-          defaultPerfProductBid
-        );
+          autoAdGroupId,
+          bid: defaultPerfProductBid,
+        });
 
         newCampaigns = [...newCampaigns, ...newProductRecords];
       }
@@ -1160,9 +1167,7 @@ const main = () => {
       console.log(
         "--promote-keyword\t\tCreate test & perf campaigns from search terms"
       );
-      console.log(
-        "--promote-product\t\tCreate perf adgroup from products"
-      );
+      console.log("--promote-product\t\tCreate perf adgroup from products");
       console.log("--impress\t\tUp bids on low impression targets");
       console.log("--lowsales\t\tAdjust bids if high clicks but low sales");
       console.log("--performers\t\tAdjust bids based on ACOS");
