@@ -12,12 +12,12 @@ const missingAsins = require("./data/missing-asins.json");
 
 // min & maximum allowable $bid
 const minimumBid = 0.02;
-const maximumBid = 0.7;
+const maximumBid = 0.67;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
 const defaultPerfKeywordBid = 0.4;
-const defaultPerfProductBid = 0.1;
+const defaultPerfProductBid = 0.2;
 
 const targetAcos = 25;
 
@@ -187,6 +187,7 @@ const loadData = () => {
       clicks: d.clicks ? parseFloat(d.clicks) : d.clicks,
       orders: d.orders ? parseFloat(d.orders) : d.orders,
       spend: d.spend ? parseFloat(d.spend) : d.spend,
+      sales: d.sales ? parseFloat(d.sales) : d.sales,
       acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
     };
   });
@@ -326,6 +327,7 @@ const createNewKeywordRecords = ({
   newCampaignName,
   adGroupId,
   customerSearchTerm,
+  matchType,
   autoCampaign,
   bid,
 }) => {
@@ -338,7 +340,7 @@ const createNewKeywordRecords = ({
       campaignId: newCampaignName,
       adGroupId,
       keywordText: customerSearchTerm,
-      matchType: adGroup.toLowerCase(),
+      matchType,
       bid,
       state: "enabled",
     },
@@ -353,13 +355,13 @@ const createNewKeywordRecords = ({
       operation: "create",
       campaignId: autoCampaign.campaignId,
       keywordText: customerSearchTerm,
-      matchType: adGroup === "Exact" ? "negativeExact" : "negativePhrase",
+      matchType: matchType === "exact" ? "negativeExact" : "negativePhrase",
       state: "enabled",
     },
   ];
 
   // if adding as broad, then add as neg exact to the broad campaign
-  if (adGroup === "Broad") {
+  if (matchType === "broad") {
     newCampaign = [
       ...newCampaign,
       {
@@ -436,7 +438,7 @@ const createNewKeywordCampaign = ({
 
   // add adgroup
 
-  const adgroupid = newCampaignName + " " + adGroupName;
+  const adGroupId = newCampaignName + " " + adGroupName;
 
   newCampaign.push({
     ...blank,
@@ -461,14 +463,15 @@ const createNewKeywordCampaign = ({
   });
 
   // add keyword
-  newCampaign = createNewKeywordRecords(
+  newCampaign = createNewKeywordRecords({
     newCampaign,
     newCampaignName,
     adGroupId,
     customerSearchTerm,
+    matchType: adGroupName.toLowerCase(),
     autoCampaign,
-    bid
-  );
+    bid,
+  });
 
   return newCampaign;
 };
@@ -606,7 +609,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
       !!existingTestCampaign ||
       !!newTestCampaigns.find((c) => c === baseCampaignName);
 
-    if (!!isExistingTestCampaign) {
+    if (!isExistingTestCampaign) {
       console.log(
         "Create Test campaign",
         baseCampaignName,
@@ -665,6 +668,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
           newCampaignName: newTestCampaignName,
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
+          matchType: "broad",
           autoCampaign,
           bid: defaultTestBid,
         });
@@ -688,7 +692,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
       !!existingPerfCampaign ||
       !!newPerfCampaigns.find((c) => c === baseCampaignName);
 
-    if (!!existingPerfCampaign) {
+    if (!existingPerfCampaign) {
       console.log(
         "Create Perf campaign",
         baseCampaignName,
@@ -742,16 +746,15 @@ const createKeywordPromotionCampaigns = (data, sales) => {
           );
         }
 
-
         const newKeywordRecords = createNewKeywordRecords({
           newCampaign: [],
           newCampaignName: newPerfCampaignName,
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
+          matchType: "exact",
           autoCampaign,
-          bid: defaultPerfKeywordBid
-        }
-        );
+          bid: defaultPerfKeywordBid,
+        });
 
         newCampaigns = [...newCampaigns, ...newKeywordRecords];
       }
@@ -1172,6 +1175,52 @@ const handleHighSpend = (data) => {
   outputRecords(targets);
 };
 
+// performance stats
+
+const salesStats = (data) => {
+  // calc spend & sales per design
+
+  const allCampaigns = data.filter(
+    (d) => d.entity === "Campaign" && d.state === "enabled"
+  );
+
+  // keyed by campaign stem
+  const stats = {};
+
+  allCampaigns.forEach((c) => {
+    const baseCampaignName = c.campaignName.replace(
+      / (Auto|Test|Perf|Prod|K|M)$/,
+      ""
+    );
+
+    const record = stats[baseCampaignName] || {
+      impressions: 0,
+      spend: 0,
+      orders: 0,
+      sales: 0,
+    };
+
+    record.impressions += c.impressions;
+    record.spend += c.spend;
+    record.orders += c.orders;
+    record.sales += c.sales;
+
+    stats[baseCampaignName] = record;
+  });
+
+  resultsFile.write("Campaign\timpressions\tspend\torders\tsales\tacos\n");
+
+  Object.keys(stats).forEach((x) => {
+    const d = stats[x];
+
+    resultsFile.write(
+      `${x}\t${d.impressions}\t${d.spend}\t${d.orders}\t${d.sales}\t${
+        d.sales > 0 ? (d.spend / d.sales) * 100 : ""
+      }\n`
+    );
+  });
+};
+
 //--------- main
 
 const main = () => {
@@ -1181,7 +1230,9 @@ const main = () => {
 
   const { data, headings } = loadData();
 
-  outputRecord(headings);
+  if (argv[2] !== "--stats") {
+    outputRecord(headings);
+  }
 
   const sales = loadSales();
 
@@ -1224,6 +1275,12 @@ const main = () => {
 
     case "--highspend": {
       handleHighSpend(data);
+
+      break;
+    }
+
+    case "--stats": {
+      salesStats(data);
 
       break;
     }
