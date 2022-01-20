@@ -402,7 +402,7 @@ const createNewKeywordRecords = ({
 
 const createNewProductRecords = ({
   newCampaign,
-  newCampaignName,
+  campaignId,
   adGroupId,
   customerSearchTerm,
   autoCampaign,
@@ -415,7 +415,7 @@ const createNewProductRecords = ({
       ...blank,
       entity: "Product Targeting",
       operation: "create",
-      campaignId: newCampaignName,
+      campaignId,
       adGroupId,
       productTargetingExpression: `asin="${customerSearchTerm.toUpperCase()}"`,
       bid,
@@ -537,7 +537,7 @@ const createNewProductCampaign = ({
   // add product
   newCampaign = createNewProductRecords({
     newCampaign,
-    newCampaignName,
+    campaignId: newCampaignName,
     adGroupId,
     customerSearchTerm,
     autoCampaign,
@@ -924,8 +924,12 @@ const createProductPromotionCampaigns = (data, sales) => {
         // default if new
         let adGroupId = newProdCampaignName + " " + "Product";
 
+        let campaignId = newProdCampaignName
+
         // check for existing
-        if (!!existingProdCampaign) {
+        if (existingProdCampaign) {
+          campaignId = existingProdCampaign.campaignId
+
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
@@ -935,7 +939,7 @@ const createProductPromotionCampaigns = (data, sales) => {
 
         const newProductRecords = createNewProductRecords({
           newCampaign: [],
-          newCampaignName: newProdCampaignName,
+          campaignId,
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
           autoCampaign,
