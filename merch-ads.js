@@ -613,6 +613,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
       console.log(
         "Create Test campaign",
         baseCampaignName,
+        " - ",
         co.customerSearchTerm
       );
 
@@ -648,6 +649,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         console.log(
           "Update Test campaign",
           baseCampaignName,
+          " - ",
           co.customerSearchTerm
         );
 
@@ -696,6 +698,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
       console.log(
         "Create Perf campaign",
         baseCampaignName,
+        " - ",
         co.customerSearchTerm
       );
 
@@ -731,6 +734,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         console.log(
           "Update Perf campaign",
           baseCampaignName,
+          " - ",
           co.customerSearchTerm
         );
 
@@ -846,6 +850,7 @@ const createProductPromotionCampaigns = (data, sales) => {
       console.log(
         "Create Prod campaign",
         baseCampaignName,
+        " - ",
         co.customerSearchTerm
       );
 
@@ -884,6 +889,7 @@ const createProductPromotionCampaigns = (data, sales) => {
         console.log(
           "Update Prod campaign",
           baseCampaignName,
+          " - ",
           co.customerSearchTerm
         );
 
