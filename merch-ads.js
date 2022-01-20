@@ -27,6 +27,9 @@ let keywordIdsUpdated = [];
 // results file
 let resultsFile = 0;
 
+// avoid updating a bid more than once
+let recordsProcessed = []
+
 // for ease of creating a new record using spread operator
 
 const blank = {
@@ -293,7 +296,24 @@ const outputRecord = (d) => {
 };
 const outputRecords = (db) => {
   db.forEach((d) => {
-    outputRecord(d);
+
+    // only process first update of a record
+    let recordKey = "";
+
+    if (d.entity === "Keyword") {
+      recordKey = `K-${d.keywordId}`
+    }
+    else if (d.entity === "Product Targeting") {
+      recordKey = `P-${d.productTargetingId}`
+    }
+
+    if (d.operation !== "update" || !recordKey || !recordsProcessed.find(x => x === recordKey)){
+      outputRecord(d);
+
+      if (recordKey) {
+        recordsProcessed = [...recordsProcessed, recordKey]
+      }
+    }
   });
 };
 
@@ -324,7 +344,7 @@ const createManualCampaign = (name, portfolioId) => {
 
 const createNewKeywordRecords = ({
   newCampaign,
-  newCampaignName,
+  campaignId,
   adGroupId,
   customerSearchTerm,
   matchType,
@@ -337,7 +357,7 @@ const createNewKeywordRecords = ({
       ...blank,
       entity: "Keyword",
       operation: "create",
-      campaignId: newCampaignName,
+      campaignId,
       adGroupId,
       keywordText: customerSearchTerm,
       matchType,
@@ -346,7 +366,7 @@ const createNewKeywordRecords = ({
     },
   ];
 
-  // add exact or phrase for auto campaign
+  // add negative exact or phrase for auto campaign
   newCampaign = [
     ...newCampaign,
     {
@@ -368,7 +388,7 @@ const createNewKeywordRecords = ({
         ...blank,
         entity: "Campaign Negative Keyword",
         operation: "create",
-        campaignId: newCampaignName,
+        campaignId,
         keywordText: customerSearchTerm,
         matchType: "negativeExact",
         state: "enabled",
@@ -465,7 +485,7 @@ const createNewKeywordCampaign = ({
   // add keyword
   newCampaign = createNewKeywordRecords({
     newCampaign,
-    newCampaignName,
+    campaignId: newCampaignName,
     adGroupId,
     customerSearchTerm,
     matchType: adGroupName.toLowerCase(),
@@ -656,8 +676,12 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         // default if new
         let adGroupId = newTestCampaignName + " " + "Broad";
 
+        let campaignId = newTestCampaignName;
+
         // check for existing
-        if (!!existingTestCampaign) {
+        if (existingTestCampaign) {
+          campaignId = existingTestCampaign.campaignId;
+
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
@@ -667,7 +691,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
 
         const newKeywordRecords = createNewKeywordRecords({
           newCampaign: [],
-          newCampaignName: newTestCampaignName,
+          campaignId,
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
           matchType: "broad",
@@ -741,8 +765,12 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         // default if new
         let adGroupId = newPerfCampaignName + " " + "Exact";
 
+        let campaignId = newPerfCampaignName
+
         // check for existing
-        if (!!existingPerfCampaign) {
+        if (existingPerfCampaign) {
+          campaignId = existingPerfCampaign.campaignId;
+
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
@@ -752,7 +780,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
 
         const newKeywordRecords = createNewKeywordRecords({
           newCampaign: [],
-          newCampaignName: newPerfCampaignName,
+          campaignId,
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
           matchType: "exact",
@@ -1294,11 +1322,11 @@ const main = () => {
     case "--all": {
       createKeywordPromotionCampaigns(data, sales);
       createProductPromotionCampaigns(data, sales);
+      handleHighSpend(data);
       handlePerformers(data);
       raiseBidsOnLowImpressions(data);
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
-      handleHighSpend(data);
 
       break;
     }
