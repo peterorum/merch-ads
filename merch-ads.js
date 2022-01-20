@@ -660,7 +660,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingTestCampaign.campaignId
-          );
+          ).adGroupId;
         }
 
         const newKeywordRecords = createNewKeywordRecords({
@@ -743,7 +743,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingPerfCampaign.campaignId
-          );
+          ).adGroupId;
         }
 
         const newKeywordRecords = createNewKeywordRecords({
@@ -896,7 +896,7 @@ const createProductPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingProdCampaign.campaignId
-          );
+          ).adGroupId;
         }
 
         const newProductRecords = createNewProductRecords({
@@ -991,17 +991,17 @@ const raiseBidsOnLowImpressions = (data) => {
   const keywords = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.impressions < fewImpressions &&
+      oldCampaigns.find((oc) => oc.campaignId === c.campaignId) &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
         // auto
         (c.entity === "Product Targeting" &&
-          (c.keywordText === "close-match" ||
-            c.keywordText === "loose-match" ||
-            c.keywordText === "complements" ||
-            c.keywordText === "substitutes"))) &&
-      c.impressions < fewImpressions &&
-      oldCampaigns.find((oc) => oc.campaignName === c.campaign)
+          (c.productTargetingExpression === "close-match" ||
+            c.productTargetingExpression === "loose-match" ||
+            c.productTargetingExpression === "complements" ||
+            c.productTargetingExpression === "substitutes")))
   );
 
   keywords.forEach((k) => {
@@ -1288,11 +1288,11 @@ const main = () => {
     case "--all": {
       createKeywordPromotionCampaigns(data, sales);
       createProductPromotionCampaigns(data, sales);
+      handlePerformers(data);
       raiseBidsOnLowImpressions(data);
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
       handleHighSpend(data);
-      handlePerformers(data);
 
       break;
     }
