@@ -192,6 +192,8 @@ const loadData = () => {
       spend: d.spend ? parseFloat(d.spend) : d.spend,
       sales: d.sales ? parseFloat(d.sales) : d.sales,
       acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
+      adGroupDefaultBidInfo: d.adGroupDefaultBidInfo ? parseFloat(d.adGroupDefaultBidInfo) : d.adGroupDefaultBidInfo,
+
     };
   });
 
@@ -1043,7 +1045,7 @@ const raiseBidsOnLowImpressions = (data) => {
   );
 
   keywords.forEach((k) => {
-    k.bid = increaseBid(k.bid, percentageIncrease);
+    k.bid = increaseBid(k.bid || k.adGroupDefaultBidInfo, percentageIncrease);
     k.operation = "update";
   });
 
