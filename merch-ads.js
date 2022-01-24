@@ -857,7 +857,7 @@ const createProductPromotionCampaigns = (data, sales) => {
       exit();
     }
 
-    const asinSearchTerm = `asin="${co.customerSearchTerm.toUpperCase()}"`;
+    const asinSearchTerm = `"asin=""${co.customerSearchTerm.toUpperCase()}"""`;
 
     //--- check for existing Prod campaign
 
@@ -906,9 +906,7 @@ const createProductPromotionCampaigns = (data, sales) => {
         !existingProdCampaign ||
         !data.find(
           (d) =>
-            !allCampaigns.find(
-              (c) => c.campaignId === existingProdCampaign.campaignId
-            ) &&
+            d.campaignId === existingProdCampaign.campaignId &&
             d.entity === "Product Targeting" &&
             d.productTargetingExpression.toLowerCase() ===
               asinSearchTerm.toLowerCase()
@@ -1003,7 +1001,7 @@ const addGeneralNegatives = (
 // raise bids on low impression targets
 
 const raiseBidsOnLowImpressions = (data) => {
-  // for campaigns 3 days or older
+  // for campaigns 6 days or older
   // up bid on targets with low impressions by 10%
 
   // get older campaigns
@@ -1034,12 +1032,14 @@ const raiseBidsOnLowImpressions = (data) => {
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
-        // auto
+        // auto or prod
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes")))
+            c.productTargetingExpression === "substitutes" ||
+            c.productTargetingExpression.startsWith("\"asin=\"")
+            )))
   );
 
   keywords.forEach((k) => {
@@ -1328,9 +1328,9 @@ const main = () => {
       createProductPromotionCampaigns(data, sales);
       handleHighSpend(data);
       handlePerformers(data);
-      raiseBidsOnLowImpressions(data);
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
+      raiseBidsOnLowImpressions(data);
 
       break;
     }
