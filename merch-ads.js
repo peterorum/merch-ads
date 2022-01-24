@@ -1073,12 +1073,14 @@ const lowerBidsOnLowSales = (data) => {
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
-        // auto
+        // auto or prod
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes"))) &&
+            c.productTargetingExpression === "substitutes" ||
+            c.productTargetingExpression.startsWith("\"asin=\"")
+            ))) &&
       // no sales
       ((c.orders === 0 && c.clicks >= zeroSalesManyClicks) ||
         // 1 sale & bad acos & more clicks
@@ -1114,12 +1116,14 @@ const handlePerformers = (data) => {
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
-        // auto
+        // auto or prod
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes"))) &&
+            c.productTargetingExpression === "substitutes" ||
+            c.productTargetingExpression.startsWith("\"asin=\"")
+            ))) &&
       c.orders >= minOrders
   );
 
@@ -1161,12 +1165,14 @@ const handleLowCtr = (data) => {
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
-        // auto
+        // auto or prod
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes"))) &&
+            c.productTargetingExpression === "substitutes" ||
+            c.productTargetingExpression.startsWith("\"asin=\"")
+            ))) &&
       c.impressions >= manyImpressions &&
       c.clicks / c.impressions < lowCtr
   );
@@ -1197,12 +1203,14 @@ const handleHighSpend = (data) => {
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
-        // auto
+        // auto or prod
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes"))) &&
+            c.productTargetingExpression === "substitutes" ||
+            c.productTargetingExpression.startsWith("\"asin=\"")
+            ))) &&
       c.spend >= maxSpend &&
       c.orders === 0
   );
