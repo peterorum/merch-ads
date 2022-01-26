@@ -28,7 +28,7 @@ let keywordIdsUpdated = [];
 let resultsFile = 0;
 
 // avoid updating a bid more than once
-let recordsProcessed = []
+let recordsProcessed = [];
 
 // for ease of creating a new record using spread operator
 
@@ -192,8 +192,9 @@ const loadData = () => {
       spend: d.spend ? parseFloat(d.spend) : d.spend,
       sales: d.sales ? parseFloat(d.sales) : d.sales,
       acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
-      adGroupDefaultBidInfo: d.adGroupDefaultBidInfo ? parseFloat(d.adGroupDefaultBidInfo) : d.adGroupDefaultBidInfo,
-
+      adGroupDefaultBidInfo: d.adGroupDefaultBidInfo
+        ? parseFloat(d.adGroupDefaultBidInfo)
+        : d.adGroupDefaultBidInfo,
     };
   });
 
@@ -298,22 +299,24 @@ const outputRecord = (d) => {
 };
 const outputRecords = (db) => {
   db.forEach((d) => {
-
     // only process first update of a record
     let recordKey = "";
 
     if (d.entity === "Keyword") {
-      recordKey = `K-${d.keywordId}`
-    }
-    else if (d.entity === "Product Targeting") {
-      recordKey = `P-${d.productTargetingId}`
+      recordKey = `K-${d.keywordId}`;
+    } else if (d.entity === "Product Targeting") {
+      recordKey = `P-${d.productTargetingId}`;
     }
 
-    if (d.operation !== "update" || !recordKey || !recordsProcessed.find(x => x === recordKey)){
+    if (
+      d.operation !== "update" ||
+      !recordKey ||
+      !recordsProcessed.find((x) => x === recordKey)
+    ) {
       outputRecord(d);
 
       if (recordKey) {
-        recordsProcessed = [...recordsProcessed, recordKey]
+        recordsProcessed = [...recordsProcessed, recordKey];
       }
     }
   });
@@ -767,7 +770,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         // default if new
         let adGroupId = newPerfCampaignName + " " + "Exact";
 
-        let campaignId = newPerfCampaignName
+        let campaignId = newPerfCampaignName;
 
         // check for existing
         if (existingPerfCampaign) {
@@ -924,11 +927,11 @@ const createProductPromotionCampaigns = (data, sales) => {
         // default if new
         let adGroupId = newProdCampaignName + " " + "Product";
 
-        let campaignId = newProdCampaignName
+        let campaignId = newProdCampaignName;
 
         // check for existing
         if (existingProdCampaign) {
-          campaignId = existingProdCampaign.campaignId
+          campaignId = existingProdCampaign.campaignId;
 
           adGroupId = data.find(
             (x) =>
@@ -1040,8 +1043,7 @@ const raiseBidsOnLowImpressions = (data) => {
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
             c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith("\"asin=\"")
-            )))
+            c.productTargetingExpression.startsWith('"asin="'))))
   );
 
   keywords.forEach((k) => {
@@ -1079,8 +1081,7 @@ const lowerBidsOnLowSales = (data) => {
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
             c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith("\"asin=\"")
-            ))) &&
+            c.productTargetingExpression.startsWith('"asin="')))) &&
       // no sales
       ((c.orders === 0 && c.clicks >= zeroSalesManyClicks) ||
         // 1 sale & bad acos & more clicks
@@ -1122,8 +1123,7 @@ const handlePerformers = (data) => {
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
             c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith("\"asin=\"")
-            ))) &&
+            c.productTargetingExpression.startsWith('"asin="')))) &&
       c.orders >= minOrders
   );
 
@@ -1171,8 +1171,7 @@ const handleLowCtr = (data) => {
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
             c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith("\"asin=\"")
-            ))) &&
+            c.productTargetingExpression.startsWith('"asin="')))) &&
       c.impressions >= manyImpressions &&
       c.clicks / c.impressions < lowCtr
   );
@@ -1209,8 +1208,7 @@ const handleHighSpend = (data) => {
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
             c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith("\"asin=\"")
-            ))) &&
+            c.productTargetingExpression.startsWith('"asin="')))) &&
       c.spend >= maxSpend &&
       c.orders === 0
   );
@@ -1267,6 +1265,42 @@ const salesStats = (data) => {
       }\n`
     );
   });
+};
+
+// reset campaign bids
+
+const resetBids = (data, match) => {
+  if (!match) {
+    console.error("Missing text");
+    exit(1);
+  }
+
+  // find targets with matching campain name
+
+  const search = RegExp(match, "i")
+
+  const targets = data.filter(
+    (c) =>
+      search.test(c.campaignNameInfo) &&
+      c.state === "enabled" &&
+      // keyword
+      ((c.entity === "Keyword" &&
+        (c.matchType === "broad" || c.matchType === "exact")) ||
+        // auto or prod
+        (c.entity === "Product Targeting" &&
+          (c.productTargetingExpression === "close-match" ||
+            c.productTargetingExpression === "loose-match" ||
+            c.productTargetingExpression === "complements" ||
+            c.productTargetingExpression === "substitutes" ||
+            c.productTargetingExpression.startsWith('"asin="'))))
+  );
+
+  targets.forEach((k) => {
+    k.bid = minimumBid
+    k.operation = "update";
+  });
+
+  outputRecords(targets);
 };
 
 //--------- main
@@ -1333,6 +1367,12 @@ const main = () => {
       break;
     }
 
+    case "--reset": {
+      resetBids(data, argv[3]);
+
+      break;
+    }
+
     case "--all": {
       createKeywordPromotionCampaigns(data, sales);
       createProductPromotionCampaigns(data, sales);
@@ -1355,9 +1395,8 @@ const main = () => {
       console.log("--performers\t\tAdjust bids based on ACOS");
       console.log("--lowctr\t\tReduce bids on low CTR");
       console.log("--highspend\t\tReduce bids on high spend");
+      console.log("--reset \"^(halloween|xmas)\"\t\tSet to min bid on campaign match");
       console.log("--all\t\tProcess all");
-      console.log(
-        "--promote\t\tCreate test & performance campaigns from auto sales"
       );
     }
   }
