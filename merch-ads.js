@@ -1397,7 +1397,6 @@ const main = () => {
       console.log("--highspend\t\tReduce bids on high spend");
       console.log("--reset \"^(halloween|xmas)\"\t\tSet to min bid on campaign match");
       console.log("--all\t\tProcess all");
-      );
     }
   }
 
