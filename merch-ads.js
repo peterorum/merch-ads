@@ -7,6 +7,7 @@ const { differenceInDays, parse, format, sub } = require("date-fns");
 // tab-separated files
 const dataFile = "data/data.txt";
 const salesFile = "data/sales.txt";
+const productFile = "data/productor-export.txt";
 
 const missingAsins = require("./data/missing-asins.json");
 
@@ -279,6 +280,88 @@ const loadSales = () => {
   });
 
   return sales2;
+};
+
+// productor export for total sales
+const loadProducts = () => {
+  const productText = fs.readFileSync(productFile).toString().split("\r\n");
+
+  const products = productText
+    .map((d) => d.split("\t"))
+    .map((d) => {
+      const [
+        brand,
+        title,
+        price,
+        bulletPoints1,
+        bulletPoints2,
+        description,
+        color1,
+        color2,
+        color3,
+        color4,
+        color5,
+        color6,
+        color7,
+        color8,
+        color9,
+        color10,
+        mens,
+        womens,
+        kids,
+        asin,
+        rank,
+        marketplace,
+        productType,
+        focusKeywords,
+        allKeywords,
+        longTailKeywords,
+        created,
+        designId,
+        status,
+        defaultColorAsinVariationforADs,
+        reviews,
+        firstSold,
+        lastSold,
+        soldAllTime,
+        soldCancelledAllTime,
+        returnRate,
+        soldReturnedAllTime,
+        soldRevenueAllTime,
+        soldRoyaltyAllTime,
+        productorNiche,
+        designedProducts,
+        missingProducts,
+        soldColors,
+        soldTypes,
+        editUrl,
+        mockupUrl,
+        niches,
+        titlewithType,
+        fileName,
+        liveUrl,
+        lastUpdated,
+      ] = d;
+
+      return {
+        asin,
+        title,
+        soldAllTime,
+      };
+    });
+
+  // skip headings
+  const [, ...products1] = products;
+
+  // convert relevant specific numeric fields
+  const products2 = products1.map((d) => {
+    return {
+      ...d,
+      soldAllTime: d.soldAllTime ? parseFloat(d.soldAllTime) : 0,
+    };
+  });
+
+  return products2;
 };
 
 //--------- dump as text for Excel
@@ -1221,49 +1304,53 @@ const handleHighSpend = (data) => {
   outputRecords(targets);
 };
 
-// performance stats
+// list unsold with high spend or impressions
 
-const salesStats = (data) => {
-  // calc spend & sales per design
-
-  const allCampaigns = data.filter(
-    (d) => d.entity === "Campaign" && d.state === "enabled"
+const handleUnsold = (data, sales, products) => {
+  const autoCampaigns = data.filter(
+    (d) =>
+      d.entity === "Campaign" &&
+      d.state === "enabled" &&
+      d.targetingType === "AUTO"
   );
 
-  // keyed by campaign stem
+  const purgeSpend = 2
+  const purgeImpressions = 1000
+
+  // keyed by campaign stem (redundant if only using auto)
   const stats = {};
 
-  allCampaigns.forEach((c) => {
-    const baseCampaignName = c.campaignName.replace(
-      / (Auto|Test|Perf|Prod|K|M)$/,
-      ""
-    );
+  autoCampaigns.forEach((ac) => {
+    const baseCampaignName = ac.campaignName.replace(/ Auto$/, "");
 
-    const record = stats[baseCampaignName] || {
-      impressions: 0,
-      spend: 0,
-      orders: 0,
-      sales: 0,
-    };
+    let asin = data.find(
+      (c) => c.campaignId === ac.campaignId && c.entity === "Product Ad"
+    ).asin;
 
-    record.impressions += c.impressions;
-    record.spend += c.spend;
-    record.orders += c.orders;
-    record.sales += c.sales;
+    const product = products.find((p) => p.asin === asin);
 
-    stats[baseCampaignName] = record;
+    if (product && product.soldAllTime === 0) {
+      const record = stats[baseCampaignName] || {
+        asin,
+        impressions: 0,
+        spend: 0,
+      };
+
+      record.impressions += ac.impressions;
+      record.spend += ac.spend;
+
+      stats[baseCampaignName] = record;
+    }
   });
 
-  resultsFile.write("Campaign\timpressions\tspend\torders\tsales\tacos\n");
+  resultsFile.write("Campaign\tasin\timpressions\tspend\n");
 
   Object.keys(stats).forEach((x) => {
     const d = stats[x];
 
-    resultsFile.write(
-      `${x}\t${d.impressions}\t${d.spend}\t${d.orders}\t${d.sales}\t${
-        d.sales > 0 ? (d.spend / d.sales) * 100 : ""
-      }\n`
-    );
+    if (d.spend >= purgeSpend || d.impressions >= purgeImpressions) {
+    resultsFile.write(`${x}\t${d.asin}\t${d.impressions}\t${d.spend}\n`);
+    }
   });
 };
 
@@ -1277,7 +1364,7 @@ const resetBids = (data, match) => {
 
   // find targets with matching campain name
 
-  const search = RegExp(match, "i")
+  const search = RegExp(match, "i");
 
   const targets = data.filter(
     (c) =>
@@ -1296,7 +1383,7 @@ const resetBids = (data, match) => {
   );
 
   targets.forEach((k) => {
-    k.bid = minimumBid
+    k.bid = minimumBid;
     k.operation = "update";
   });
 
@@ -1312,11 +1399,12 @@ const main = () => {
 
   const { data, headings } = loadData();
 
-  if (argv[2] !== "--stats") {
+  if (!/--(reset|purge)/.test(argv[2])) {
     outputRecord(headings);
   }
 
   const sales = loadSales();
+  const products = loadProducts();
 
   switch (argv[2]) {
     case "--promote-keyword": {
@@ -1361,8 +1449,8 @@ const main = () => {
       break;
     }
 
-    case "--stats": {
-      salesStats(data);
+    case "--purge": {
+      handleUnsold(data, sales, products);
 
       break;
     }
@@ -1395,7 +1483,10 @@ const main = () => {
       console.log("--performers\t\tAdjust bids based on ACOS");
       console.log("--lowctr\t\tReduce bids on low CTR");
       console.log("--highspend\t\tReduce bids on high spend");
-      console.log("--reset \"^(halloween|xmas)\"\t\tSet to min bid on campaign match");
+      console.log(
+        '--reset "^(halloween|xmas)"\t\tSet to min bid on campaign match'
+      );
+      console.log("--purge\t\tOutput unsold for purging");
       console.log("--all\t\tProcess all");
     }
   }
