@@ -719,7 +719,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
 
     if (!isExistingTestCampaign) {
       console.log(
-        "Create Test campaign",
+        "Create Test campaign - ",
         baseCampaignName,
         " - ",
         co.customerSearchTerm
@@ -755,7 +755,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         )
       ) {
         console.log(
-          "Update Test campaign",
+          "Update Test campaign - ",
           baseCampaignName,
           " - ",
           co.customerSearchTerm
@@ -808,7 +808,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
 
     if (!existingPerfCampaign) {
       console.log(
-        "Create Perf campaign",
+        "Create Perf campaign - ",
         baseCampaignName,
         " - ",
         co.customerSearchTerm
@@ -844,7 +844,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
         )
       ) {
         console.log(
-          "Update Perf campaign",
+          "Update Perf campaign - ",
           baseCampaignName,
           " - ",
           co.customerSearchTerm
@@ -1132,6 +1132,8 @@ const raiseBidsOnLowImpressions = (data) => {
   keywords.forEach((k) => {
     k.bid = increaseBid(k.bid || k.adGroupDefaultBidInfo, percentageIncrease);
     k.operation = "update";
+
+    // console.log(`Low impressions - ${k.campaignNameInfo}, new bid ${k.bid}`);
   });
 
   outputRecords(keywords);
@@ -1176,6 +1178,14 @@ const lowerBidsOnLowSales = (data) => {
   keywords.forEach((k) => {
     k.bid = decreaseBid(k.bid, percentageDecrease);
     k.operation = "update";
+
+    if (k.keywordText) {
+      console.log(
+        `High clicks, low sales - ${k.campaignNameInfo}, ${
+          k.productTargetingExpression || k.keywordText
+        }, new bid ${k.bid}`
+      );
+    }
   });
 
   outputRecords(keywords);
@@ -1217,10 +1227,14 @@ const handlePerformers = (data) => {
       // up bid if under acos
 
       k.bid = increaseBid(k.bid, percentageChange);
+
+      console.log(`Under acos - ${k.campaignNameInfo}, new bid ${k.bid}`);
     } else {
       // decrease bid if over acos
 
       k.bid = decreaseBid(k.bid, percentageChange);
+
+      console.log(`Over acos - ${k.campaignNameInfo}, new bid ${k.bid}`);
     }
   });
 
@@ -1262,6 +1276,8 @@ const handleLowCtr = (data) => {
   targets.forEach((k) => {
     k.bid = decreaseBid(k.bid, percentageDecrease);
     k.operation = "update";
+
+    console.log(`Low ctr - ${k.campaignNameInfo}, new bid ${k.bid}`);
   });
 
   outputRecords(targets);
@@ -1298,6 +1314,7 @@ const handleHighSpend = (data) => {
 
   targets.forEach((k) => {
     k.bid = decreaseBid(k.bid, percentageDecrease);
+    console.log(`High spend - ${k.campaignNameInfo}, new bid ${k.bid}`);
     k.operation = "update";
   });
 
@@ -1306,7 +1323,7 @@ const handleHighSpend = (data) => {
 
 // list unsold with high spend or impressions
 
-const handleUnsold = (data, sales, products) => {
+const handleUnsold = (data, products) => {
   const autoCampaigns = data.filter(
     (d) =>
       d.entity === "Campaign" &&
@@ -1314,8 +1331,8 @@ const handleUnsold = (data, sales, products) => {
       d.targetingType === "AUTO"
   );
 
-  const purgeSpend = 2
-  const purgeImpressions = 1000
+  const purgeSpend = 3;
+  const purgeImpressions = 800;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
@@ -1349,7 +1366,9 @@ const handleUnsold = (data, sales, products) => {
     const d = stats[x];
 
     if (d.spend >= purgeSpend || d.impressions >= purgeImpressions) {
-    resultsFile.write(`${x}\t${d.asin}\t${d.impressions}\t${d.spend}\n`);
+      console.log(`Purge - ${x}, ${d.impressions}, ${d.spend}`);
+
+      resultsFile.write(`${x}\t${d.asin}\t${d.impressions}\t${d.spend}\n`);
     }
   });
 };
@@ -1449,14 +1468,14 @@ const main = () => {
       break;
     }
 
-    case "--purge": {
-      handleUnsold(data, sales, products);
+    case "--reset": {
+      resetBids(data, argv[3]);
 
       break;
     }
 
-    case "--reset": {
-      resetBids(data, argv[3]);
+    case "--purge": {
+      handleUnsold(data, products);
 
       break;
     }
