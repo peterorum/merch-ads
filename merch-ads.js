@@ -1,6 +1,7 @@
 const { assert } = require("console");
 const fs = require("fs");
 const { exit, argv } = require("process");
+const _ = require("lodash");
 
 const { differenceInDays, parse, format, sub } = require("date-fns");
 
@@ -348,6 +349,9 @@ const loadProducts = () => {
         title,
         price,
         soldAllTime,
+        designId,
+        productType,
+        marketplace,
       };
     });
 
@@ -1242,7 +1246,9 @@ const handlePerformers = (data, products) => {
 
       const price = products.find((p) => p.asin === asin).price;
 
-      console.log(`Over acos - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`);
+      console.log(
+        `Over acos - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`
+      );
     }
   });
 
@@ -1383,7 +1389,7 @@ const handleUnsold = (data, products) => {
   });
 };
 
-// reset campaign bids
+//----- reset campaign bids
 
 const resetBids = (data, match) => {
   if (!match) {
@@ -1417,6 +1423,30 @@ const resetBids = (data, match) => {
   });
 
   outputRecords(targets);
+};
+
+//----- list designs without US t-shirts
+// so can delete unused designs which are on other products
+// perhaps autouploaded from a deleted design
+
+const handleDesigns = (products) => {
+  const designIds = _.uniq(products.map((p) => p.designId));
+
+  // find designIds without a US t-shirt
+
+  unused = designIds.filter(
+    (d) =>
+      !products.find(
+        (p) =>
+          p.designId === d &&
+          p.productType === "Standard T-Shirt" &&
+          p.marketplace === "US"
+      )
+  );
+
+  const unusedProducts = products.filter(p => unused.find(u => u === p.designId))
+
+  console.log(unusedProducts);
 };
 
 //--------- main
@@ -1490,6 +1520,12 @@ const main = () => {
       break;
     }
 
+    case "--designs": {
+      handleDesigns(products);
+
+      break;
+    }
+
     case "--all": {
       createKeywordPromotionCampaigns(data, sales);
       createProductPromotionCampaigns(data, sales);
@@ -1516,6 +1552,7 @@ const main = () => {
         '--reset "^(halloween|xmas)"\t\tSet to min bid on campaign match'
       );
       console.log("--purge\t\tOutput unsold for purging");
+      console.log("--designs\t\tList designs without US t-shirts");
       console.log("--all\t\tProcess all");
     }
   }
