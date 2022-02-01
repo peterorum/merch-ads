@@ -1347,7 +1347,7 @@ const handleUnsold = (data, products) => {
   );
 
   const purgeSpend = 3;
-  const purgeImpressions = 800;
+  const purgeImpressions = 750;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
@@ -1514,14 +1514,14 @@ const main = () => {
       break;
     }
 
-    case "--purge": {
-      handleUnsold(data, products);
+    case "--designs": {
+      handleDesigns(products);
 
       break;
     }
 
-    case "--designs": {
-      handleDesigns(products);
+    case "--purge": {
+      handleUnsold(data, products);
 
       break;
     }
