@@ -346,6 +346,7 @@ const loadProducts = () => {
       return {
         asin,
         title,
+        price,
         soldAllTime,
       };
     });
@@ -357,6 +358,7 @@ const loadProducts = () => {
   const products2 = products1.map((d) => {
     return {
       ...d,
+      price: d.price ? parseFloat(d.price) : 0,
       soldAllTime: d.soldAllTime ? parseFloat(d.soldAllTime) : 0,
     };
   });
@@ -1191,9 +1193,9 @@ const lowerBidsOnLowSales = (data) => {
   outputRecords(keywords);
 };
 
-// raise bids on low impression targets
+//----------- raise bids on low impression targets
 
-const handlePerformers = (data) => {
+const handlePerformers = (data, products) => {
   // increase or decrease bids on sellers based on ACOS
 
   const minOrders = 2;
@@ -1234,7 +1236,13 @@ const handlePerformers = (data) => {
 
       k.bid = decreaseBid(k.bid, percentageChange);
 
-      console.log(`Over acos - ${k.campaignNameInfo}, new bid ${k.bid}`);
+      let asin = data.find(
+        (c) => c.campaignId === k.campaignId && c.entity === "Product Ad"
+      ).asin;
+
+      const price = products.find((p) => p.asin === asin).price;
+
+      console.log(`Over acos - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`);
     }
   });
 
@@ -1328,7 +1336,8 @@ const handleUnsold = (data, products) => {
     (d) =>
       d.entity === "Campaign" &&
       d.state === "enabled" &&
-      d.targetingType === "AUTO"
+      d.targetingType === "AUTO" &&
+      d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
   const purgeSpend = 3;
@@ -1346,6 +1355,7 @@ const handleUnsold = (data, products) => {
 
     const product = products.find((p) => p.asin === asin);
 
+    // check for no sales
     if (product && product.soldAllTime === 0) {
       const record = stats[baseCampaignName] || {
         asin,
@@ -1366,7 +1376,7 @@ const handleUnsold = (data, products) => {
     const d = stats[x];
 
     if (d.spend >= purgeSpend || d.impressions >= purgeImpressions) {
-      console.log(`Purge - ${x}, ${d.impressions}, ${d.spend}`);
+      console.log(`Purge - ${x}, ${d.asin}, ${d.impressions}, ${d.spend}`);
 
       resultsFile.write(`${x}\t${d.asin}\t${d.impressions}\t${d.spend}\n`);
     }
@@ -1484,7 +1494,7 @@ const main = () => {
       createKeywordPromotionCampaigns(data, sales);
       createProductPromotionCampaigns(data, sales);
       handleHighSpend(data);
-      handlePerformers(data);
+      handlePerformers(data, products);
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
       raiseBidsOnLowImpressions(data);
