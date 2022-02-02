@@ -352,7 +352,7 @@ const loadProducts = () => {
         designId,
         productType,
         marketplace,
-        status
+        status,
       };
     });
 
@@ -690,7 +690,10 @@ const createKeywordPromotionCampaigns = (data, sales) => {
     const baseCampaignName = co.campaignName.replace(/( Auto)|( A)$/, "");
 
     const autoAdGroupId = data.find(
-      (x) => x.entity === "Ad Group" && x.campaignId === autoCampaign.campaignId
+      (x) =>
+        x.entity === "Ad Group" &&
+        x.campaignId === autoCampaign.campaignId &&
+        x.state === "enabled"
     ).adGroupId;
 
     // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
@@ -782,7 +785,8 @@ const createKeywordPromotionCampaigns = (data, sales) => {
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
-              x.campaignId === existingTestCampaign.campaignId
+              x.campaignId === existingTestCampaign.campaignId &&
+              x.state === "enabled"
           ).adGroupId;
         }
 
@@ -871,7 +875,8 @@ const createKeywordPromotionCampaigns = (data, sales) => {
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
-              x.campaignId === existingPerfCampaign.campaignId
+              x.campaignId === existingPerfCampaign.campaignId &&
+              x.state === 'enabled'
           ).adGroupId;
         }
 
@@ -933,7 +938,7 @@ const createProductPromotionCampaigns = (data, sales) => {
     const baseCampaignName = co.campaignName.replace(/ Auto$/, "");
 
     const autoAdGroupId = data.find(
-      (x) => x.entity === "Ad Group" && x.campaignId === autoCampaign.campaignId
+      (x) => x.entity === "Ad Group" && x.campaignId === autoCampaign.campaignId && x.state === 'enabled'
     ).adGroupId;
 
     // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
@@ -1029,6 +1034,7 @@ const createProductPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingProdCampaign.campaignId
+              && x.state === 'enabled'
           ).adGroupId;
         }
 
@@ -1456,7 +1462,9 @@ const handleDesigns = (products) => {
 
   // just find first product for each design
 
-  const unusedProducts = unused.map(d => products.find(p => p.designId === d))
+  const unusedProducts = unused.map((d) =>
+    products.find((p) => p.designId === d)
+  );
 
   console.log(unusedProducts);
 };
