@@ -14,7 +14,7 @@ const missingAsins = require("./data/missing-asins.json");
 
 // min & maximum allowable $bid
 const minimumBid = 0.02;
-const maximumBid = 0.67;
+const maximumBid = 0.55;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -352,6 +352,7 @@ const loadProducts = () => {
         designId,
         productType,
         marketplace,
+        status
       };
     });
 
@@ -652,6 +653,8 @@ const createNewProductCampaign = ({
 
 const createKeywordPromotionCampaigns = (data, sales) => {
   const allCampaigns = data.filter((d) => d.entity === "Campaign");
+
+  // todo: handle Test campaign sales
 
   const autoCampaigns = allCampaigns.filter((d) => d.targetingType === "AUTO");
 
@@ -1054,7 +1057,7 @@ const increaseBid = (bid, percentage) => {
 
   const newBid = Math.ceil(bid1 + (bid1 * percentage) / 100);
 
-  return Math.min(newBid / 100, maximumBid);
+  return Math.max(Math.min(newBid / 100, maximumBid), minimumBid);
 };
 
 // up the bid by a percentage
@@ -1064,7 +1067,7 @@ const decreaseBid = (bid, percentage) => {
 
   const newBid = Math.floor(bid1 - (bid1 * percentage) / 100);
 
-  return Math.max(newBid / 100, minimumBid);
+  return Math.min(Math.max(newBid / 100, minimumBid), maximumBid);
 };
 
 // add general negatives to a campaign
@@ -1430,21 +1433,30 @@ const resetBids = (data, match) => {
 // perhaps autouploaded from a deleted design
 
 const handleDesigns = (products) => {
-  const designIds = _.uniq(products.map((p) => p.designId));
+  const designIds = _.uniq(
+    products.filter((p) => p.status !== "DELETED").map((p) => p.designId)
+  );
 
   // find designIds without a US t-shirt
 
-  unused = designIds.filter(
+  const unused = designIds.filter(
     (d) =>
       !products.find(
         (p) =>
           p.designId === d &&
           p.productType === "Standard T-Shirt" &&
-          p.marketplace === "US"
+          p.marketplace === "US" &&
+          p.status !== "Removed"
       )
   );
 
-  const unusedProducts = products.filter(p => unused.find(u => u === p.designId))
+  // const unusedProducts = products.filter((p) =>
+  //   unused.find((u) => u === p.designId)
+  // );
+
+  // just find first product for each design
+
+  const unusedProducts = unused.map(d => products.find(p => p.designId === d))
 
   console.log(unusedProducts);
 };
