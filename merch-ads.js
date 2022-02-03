@@ -876,7 +876,7 @@ const createKeywordPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingPerfCampaign.campaignId &&
-              x.state === 'enabled'
+              x.state === "enabled"
           ).adGroupId;
         }
 
@@ -938,7 +938,10 @@ const createProductPromotionCampaigns = (data, sales) => {
     const baseCampaignName = co.campaignName.replace(/ Auto$/, "");
 
     const autoAdGroupId = data.find(
-      (x) => x.entity === "Ad Group" && x.campaignId === autoCampaign.campaignId && x.state === 'enabled'
+      (x) =>
+        x.entity === "Ad Group" &&
+        x.campaignId === autoCampaign.campaignId &&
+        x.state === "enabled"
     ).adGroupId;
 
     // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
@@ -1033,8 +1036,8 @@ const createProductPromotionCampaigns = (data, sales) => {
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
-              x.campaignId === existingProdCampaign.campaignId
-              && x.state === 'enabled'
+              x.campaignId === existingProdCampaign.campaignId &&
+              x.state === "enabled"
           ).adGroupId;
         }
 
@@ -1434,6 +1437,42 @@ const resetBids = (data, match) => {
   outputRecords(targets);
 };
 
+//----- add negative exact to matching campaigns
+
+const addNegative = (data, match, term) => {
+  if (!match || !term) {
+    console.error("Missing campaign match & exact text");
+    exit(1);
+  }
+
+  // find targets with matching campain name
+
+  const search = RegExp(match, "i");
+
+  const campaigns = data.filter(
+    (c) =>
+      search.test(c.campaignNameInfo) &&
+      c.state === "enabled" &&
+      c.targetingType === "AUTO"
+  );
+
+  campaigns.forEach((c) => {
+    console.log(`Add "${term}" to ${c.campaignName}`);
+
+    const record = {
+      ...blank,
+      entity: "Campaign Negative Keyword",
+      operation: "create",
+      campaignId: c.campaignId,
+      keywordText: term,
+      matchType: "negativeExact",
+      state: "enabled",
+    };
+
+    outputRecord(record)
+  });
+};
+
 //----- list designs without US t-shirts
 // so can delete unused designs which are on other products
 // perhaps autouploaded from a deleted design
@@ -1534,6 +1573,12 @@ const main = () => {
       break;
     }
 
+    case "--negative": {
+      addNegative(data, argv[3], argv[4]);
+
+      break;
+    }
+
     case "--designs": {
       handleDesigns(products);
 
@@ -1570,6 +1615,9 @@ const main = () => {
       console.log("--highspend\t\tReduce bids on high spend");
       console.log(
         '--reset "^(halloween|xmas)"\t\tSet to min bid on campaign match'
+      );
+      console.log(
+        '--negative "^pizza" "funny shirt"\t\tAdd negative exact to auto campaigns'
       );
       console.log("--purge\t\tOutput unsold for purging");
       console.log("--designs\t\tList designs without US t-shirts");
