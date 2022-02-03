@@ -1349,7 +1349,7 @@ const handleHighSpend = (data) => {
 
 // list unsold with high spend or impressions
 
-const handleUnsold = (data, products) => {
+const listPurgeable = (data, products) => {
   const autoCampaigns = data.filter(
     (d) =>
       d.entity === "Campaign" &&
@@ -1358,8 +1358,8 @@ const handleUnsold = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 3;
-  const purgeImpressions = 750;
+  const purgeSpend = 1.5;
+  const purgeImpressions = 650;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
@@ -1586,7 +1586,7 @@ const main = () => {
     }
 
     case "--purge": {
-      handleUnsold(data, products);
+      listPurgeable(data, products);
 
       break;
     }
