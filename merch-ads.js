@@ -14,7 +14,11 @@ const missingAsins = require("./data/missing-asins.json");
 
 // min & maximum allowable $bid
 const minimumBid = 0.02;
-const maximumBid = 0.55;
+
+const maximumAutoBid = 0.54;
+const maximumTestBid = 0.60;
+const maximumProdBid = 0.55;
+const maximumPerfBid = 0.65;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -1061,7 +1065,20 @@ const createProductPromotionCampaigns = (data, sales) => {
 
 // up the bid by a percentage
 
-const increaseBid = (bid, percentage) => {
+const increaseBid = (bid, percentage, campaignName) => {
+
+  let maximumBid = maximumAutoBid;
+
+  if (/test$/i.test(campaignName)) {
+    maximumBid = maximumTestBid
+  }
+  else if (/prod$/i.test(campaignName)) {
+    maximumBid = maximumProdBid
+  }
+  else if (/perf$/i.test(campaignName)) {
+    maximumBid = maximumPerfBid
+  }
+
   const bid1 = 100 * (bid || defaultAutoBid);
 
   const newBid = Math.ceil(bid1 + (bid1 * percentage) / 100);
@@ -1076,7 +1093,7 @@ const decreaseBid = (bid, percentage) => {
 
   const newBid = Math.floor(bid1 - (bid1 * percentage) / 100);
 
-  return Math.min(Math.max(newBid / 100, minimumBid), maximumBid);
+  return Math.min(Math.max(newBid / 100, minimumBid), maximumAutoBid);
 };
 
 // add general negatives to a campaign
@@ -1148,10 +1165,8 @@ const raiseBidsOnLowImpressions = (data) => {
   );
 
   keywords.forEach((k) => {
-    k.bid = increaseBid(k.bid || k.adGroupDefaultBidInfo, percentageIncrease);
+    k.bid = increaseBid(k.bid || k.adGroupDefaultBidInfo, percentageIncrease, k.campaignNameInfo);
     k.operation = "update";
-
-    // console.log(`Low impressions - ${k.campaignNameInfo}, new bid ${k.bid}`);
   });
 
   outputRecords(keywords);
@@ -1244,7 +1259,7 @@ const handlePerformers = (data, products) => {
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      k.bid = increaseBid(k.bid, percentageChange);
+      k.bid = increaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
       console.log(`Under acos - ${k.campaignNameInfo}, new bid ${k.bid}`);
     } else {
@@ -1358,8 +1373,8 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 1.5;
-  const purgeImpressions = 650;
+  const purgeSpend = 2.50;
+  const purgeImpressions = 900;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
