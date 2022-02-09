@@ -3,7 +3,8 @@ const fs = require("fs");
 const { exit, argv } = require("process");
 const _ = require("lodash");
 
-const { differenceInDays, parse, format, sub } = require("date-fns");
+const { differenceInDays, parse, sub } = require("date-fns");
+const { utcToZonedTime, format } = require('date-fns-tz')
 
 // tab-separated files
 const dataFile = "data/data.txt";
@@ -421,6 +422,8 @@ const outputRecords = (db) => {
 const createManualCampaign = (name, portfolioId) => {
   const records = [];
 
+  const startDate = format(utcToZonedTime(new Date(), 'PST'), 'yyyyMMdd', {timeZone: 'PST'})
+
   // header
   records.push({
     ...blank,
@@ -433,7 +436,7 @@ const createManualCampaign = (name, portfolioId) => {
     targetingType: "MANUAL",
     state: "enabled",
     biddingStrategy: "Dynamic bids - down only",
-    startDate: format(sub(new Date(), { days: 1 }), "yyyyMMdd"), // US date still yesterday
+    startDate
   });
 
   return records;
