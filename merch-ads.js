@@ -16,15 +16,15 @@ const missingAsins = require("./data/missing-asins.json");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.54;
+const maximumAutoBid = 0.53;
 const maximumTestBid = 0.60;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.65;
 
-const defaultAutoBid = 0.2;
-const defaultTestBid = 0.4;
-const defaultPerfKeywordBid = 0.4;
-const defaultPerfProductBid = 0.2;
+const defaultAutoBid = 0.20;
+const defaultTestBid = 0.40;
+const defaultPerfKeywordBid = 0.40;
+const defaultPerfProductBid = 0.20;
 
 const targetAcos = 25;
 
@@ -665,13 +665,14 @@ const createKeywordPromotionCampaigns = (data, sales) => {
 
   const autoCampaigns = allCampaigns.filter((d) => d.targetingType === "AUTO");
 
-  // ignore product orders, and keywords orders with more than 4 words
+  // ignore product orders, and keywords orders with more than 4 words or just 1
 
   let campaignsWithOrders = sales.filter(
     (s) =>
       s.orders > 0 &&
       !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm) &&
-      s.customerSearchTerm.split(/ /).length <= 4
+      s.customerSearchTerm.split(/ /).length <= 4 &&
+      s.customerSearchTerm.split(/ /).length > 1
   );
 
   let newCampaigns = [];
@@ -1291,7 +1292,7 @@ const handleLowCtr = (data) => {
   // reduce bid on targets with many impressions but low clicks
 
   const manyImpressions = 1000;
-  const lowCtr = 0.001;
+  const lowCtr = 0.1 / 100;
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
