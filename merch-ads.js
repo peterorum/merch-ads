@@ -4,7 +4,7 @@ const { exit, argv } = require("process");
 const _ = require("lodash");
 
 const { differenceInDays, parse, sub } = require("date-fns");
-const { utcToZonedTime, format } = require('date-fns-tz')
+const { utcToZonedTime, format } = require("date-fns-tz");
 
 // tab-separated files
 const dataFile = "data/data.txt";
@@ -12,19 +12,20 @@ const salesFile = "data/sales.txt";
 const productFile = "data/productor-export.txt";
 
 const missingAsins = require("./data/missing-asins.json");
+const { ca } = require("date-fns/locale");
 
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.53;
-const maximumTestBid = 0.60;
+const maximumAutoBid = 0.51;
+const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.65;
 
-const defaultAutoBid = 0.20;
-const defaultTestBid = 0.40;
-const defaultPerfKeywordBid = 0.40;
-const defaultPerfProductBid = 0.20;
+const defaultAutoBid = 0.2;
+const defaultTestBid = 0.4;
+const defaultPerfKeywordBid = 0.4;
+const defaultPerfProductBid = 0.2;
 
 const targetAcos = 25;
 
@@ -422,7 +423,9 @@ const outputRecords = (db) => {
 const createManualCampaign = (name, portfolioId) => {
   const records = [];
 
-  const startDate = format(utcToZonedTime(new Date(), 'PST'), 'yyyyMMdd', {timeZone: 'PST'})
+  const startDate = format(utcToZonedTime(new Date(), "PST"), "yyyyMMdd", {
+    timeZone: "PST",
+  });
 
   // header
   records.push({
@@ -436,7 +439,7 @@ const createManualCampaign = (name, portfolioId) => {
     targetingType: "MANUAL",
     state: "enabled",
     biddingStrategy: "Dynamic bids - down only",
-    startDate
+    startDate,
   });
 
   return records;
@@ -1070,17 +1073,14 @@ const createProductPromotionCampaigns = (data, sales) => {
 // up the bid by a percentage
 
 const increaseBid = (bid, percentage, campaignName) => {
-
   let maximumBid = maximumAutoBid;
 
   if (/test$/i.test(campaignName)) {
-    maximumBid = maximumTestBid
-  }
-  else if (/prod$/i.test(campaignName)) {
-    maximumBid = maximumProdBid
-  }
-  else if (/perf$/i.test(campaignName)) {
-    maximumBid = maximumPerfBid
+    maximumBid = maximumTestBid;
+  } else if (/prod$/i.test(campaignName)) {
+    maximumBid = maximumProdBid;
+  } else if (/perf$/i.test(campaignName)) {
+    maximumBid = maximumPerfBid;
   }
 
   const bid1 = 100 * (bid || defaultAutoBid);
@@ -1169,7 +1169,11 @@ const raiseBidsOnLowImpressions = (data) => {
   );
 
   keywords.forEach((k) => {
-    k.bid = increaseBid(k.bid || k.adGroupDefaultBidInfo, percentageIncrease, k.campaignNameInfo);
+    k.bid = increaseBid(
+      k.bid || k.adGroupDefaultBidInfo,
+      percentageIncrease,
+      k.campaignNameInfo
+    );
     k.operation = "update";
   });
 
@@ -1286,7 +1290,7 @@ const handlePerformers = (data, products) => {
   outputRecords(targets);
 };
 
-// lower bids on low ctr
+//---------- lower bids on low ctr
 
 const handleLowCtr = (data) => {
   // reduce bid on targets with many impressions but low clicks
@@ -1377,8 +1381,8 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 2.50;
-  const purgeImpressions = 900;
+  const purgeSpend = 3.0;
+  const purgeImpressions = 1000;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
@@ -1456,6 +1460,33 @@ const resetBids = (data, match) => {
   outputRecords(targets);
 };
 
+//----- reset auto bids to new max
+
+const resetMaxBids = (data) => {
+  // find auto targets over currenet auto max bid
+
+  const targets = data.filter(
+    (c) =>
+      /auto$/i.test(c.campaignNameInfo) &&
+      c.state === "enabled" &&
+      c.entity === "Product Targeting" &&
+      (c.productTargetingExpression === "close-match" ||
+        c.productTargetingExpression === "loose-match" ||
+        c.productTargetingExpression === "complements" ||
+        c.productTargetingExpression === "substitutes") &&
+      c.bid > maximumAutoBid
+  );
+
+  targets.forEach((k) => {
+    k.bid = maximumAutoBid;
+    k.operation = "update";
+
+    // console.log(`Over max bid - ${k.campaignNameInfo}, new bid ${k.bid}`);
+  });
+
+  outputRecords(targets);
+};
+
 //----- add negative exact to matching campaigns
 
 const addNegative = (data, match, term) => {
@@ -1488,7 +1519,7 @@ const addNegative = (data, match, term) => {
       state: "enabled",
     };
 
-    outputRecord(record)
+    outputRecord(record);
   });
 };
 
@@ -1592,6 +1623,12 @@ const main = () => {
       break;
     }
 
+    case "--maxbids": {
+      resetMaxBids(data);
+
+      break;
+    }
+
     case "--negative": {
       addNegative(data, argv[3], argv[4]);
 
@@ -1618,6 +1655,7 @@ const main = () => {
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
       raiseBidsOnLowImpressions(data);
+      resetMaxBids(data)
 
       break;
     }
@@ -1632,6 +1670,7 @@ const main = () => {
       console.log("--performers\t\tAdjust bids based on ACOS");
       console.log("--lowctr\t\tReduce bids on low CTR");
       console.log("--highspend\t\tReduce bids on high spend");
+      console.log("--maxbids\t\tReset any over the current max auto bid");
       console.log(
         '--reset "^(halloween|xmas)"\t\tSet to min bid on campaign match'
       );
