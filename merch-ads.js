@@ -17,7 +17,7 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.51;
+const maximumAutoBid = 0.50;
 const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.65;
@@ -1381,7 +1381,7 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 3.0;
+  const purgeSpend = 3.00;
   const purgeImpressions = 1000;
 
   // keyed by campaign stem (redundant if only using auto)
