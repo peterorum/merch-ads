@@ -17,7 +17,7 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.50;
+const maximumAutoBid = 0.49;
 const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.65;
@@ -84,6 +84,8 @@ const blank = {
   adGroupDefaultBidInfo: "",
   resolvedProductTargetingExpressionInfo: "",
 };
+
+const format2dp = (num) => (Math.round(num * 100) / 100).toFixed(2);
 
 // load data exported from Excel as a tsv
 
@@ -1125,7 +1127,7 @@ const addGeneralNegatives = (
   return newCampaign;
 };
 
-// raise bids on low impression targets
+//--- raise bids on low impression targets
 
 const raiseBidsOnLowImpressions = (data) => {
   // for campaigns 6 days or older
@@ -1381,7 +1383,7 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 3.00;
+  const purgeSpend = 3.0;
   const purgeImpressions = 1000;
 
   // keyed by campaign stem (redundant if only using auto)
@@ -1421,6 +1423,60 @@ const listPurgeable = (data, products) => {
 
       resultsFile.write(`${x}\t${d.asin}\t${d.impressions}\t${d.spend}\n`);
     }
+  });
+};
+
+//--- calc stats on target types
+
+const calcTargetStats = (data) => {
+  const allCampaigns = data.filter(
+    (d) => d.entity === "Campaign" && d.state === "enabled"
+  );
+
+  const stats = {};
+
+  const targets = data.forEach((c) => {
+    if (
+      c.state === "enabled" &&
+      c.entity === "Product Targeting" &&
+      (c.productTargetingExpression === "close-match" ||
+        c.productTargetingExpression === "loose-match" ||
+        c.productTargetingExpression === "complements" ||
+        c.productTargetingExpression === "substitutes")
+    ) {
+      let stat = stats[c.productTargetingExpression];
+
+      if (!stat) {
+        stat = {
+          impressions: 0,
+          clicks: 0,
+          orders: 0,
+          sales: 0,
+          spend: 0,
+        };
+      }
+      stat.impressions += c.impressions;
+      stat.clicks += c.clicks;
+      stat.orders += c.orders;
+      stat.sales += c.sales;
+      stat.spend += c.spend;
+
+      stats[c.productTargetingExpression] = stat;
+    }
+  });
+
+  console.log('Target\timpressions\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS');
+
+  Object.keys(stats).forEach((k) => {
+    const s = stats[k];
+
+    console.log(
+      `${k}\t${s.impressions}\t${s.clicks}\t${format2dp(s.clicks/s.impressions * 100)}%\t$${format2dp(s.spend/s.clicks)}\t${s.orders}\t$${format2dp(
+        s.spend
+      )}\t$${format2dp(s.sales)}\t${
+        s.orders > 0 ? format2dp((s.spend / s.sales) * 100) : "-"
+      }%`
+    );
   });
 };
 
@@ -1641,6 +1697,12 @@ const main = () => {
       break;
     }
 
+    case "--targets": {
+      calcTargetStats(data, products);
+
+      break;
+    }
+
     case "--purge": {
       listPurgeable(data, products);
 
@@ -1655,7 +1717,7 @@ const main = () => {
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
       raiseBidsOnLowImpressions(data);
-      resetMaxBids(data)
+      resetMaxBids(data);
 
       break;
     }
@@ -1679,6 +1741,7 @@ const main = () => {
       );
       console.log("--purge\t\tOutput unsold for purging");
       console.log("--designs\t\tList designs without US t-shirts");
+      console.log("--targets\t\tShow ACOS by target type");
       console.log("--all\t\tProcess all");
     }
   }
