@@ -29,7 +29,7 @@ const defaultPerfProductBid = 0.2;
 
 const targetAcos = 25;
 
-const maxPrice = 18.99
+const maxPrice = 18.99;
 
 // one update per keyword
 let keywordIdsUpdated = [];
@@ -1285,7 +1285,7 @@ const handlePerformers = (data, products) => {
 
       const price = products.find((p) => p.asin === asin).price;
 
-      const msg = (price < maxPrice) ? 'Over acos' : '*** Over acos'
+      const msg = price < maxPrice ? "Over acos" : "*** Over acos";
 
       console.log(
         `${msg} - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`
@@ -1376,7 +1376,7 @@ const handleHighSpend = (data) => {
   outputRecords(targets);
 };
 
-// list unsold with high spend or impressions
+//--- list unsold with high spend or impressions
 
 const listPurgeable = (data, products) => {
   const autoCampaigns = data.filter(
@@ -1430,6 +1430,73 @@ const listPurgeable = (data, products) => {
   });
 };
 
+//--- list products with no auto campaign
+
+const listNoAds = (data, products) => {
+  let noAds = [];
+
+  products.forEach((p) => {
+    if (
+      p.productType === "Standard T-Shirt" &&
+      p.marketplace === "US" &&
+      p.status !== "Removed" &&
+      !data.find(
+        (c) =>
+          c.entity === "Product Ad" &&
+          c.state === "enabled" &&
+          c.asin === p.asin
+      )
+    ) {
+      noAds = [
+        ...noAds,
+        {
+          title: p.title,
+          asin: p.asin,
+        },
+      ];
+    }
+  });
+
+  noAds.forEach((x) => {
+    console.log(`${x.title}\t${x.asin}`);
+  });
+};
+
+//--- list products with duplicate campaigns
+
+const listDuplicateAds = (data, products) => {
+  let dupAds = [];
+
+  products.forEach((p) => {
+    if (
+      p.productType === "Standard T-Shirt" &&
+      p.marketplace === "US" &&
+      p.status !== "Removed"
+    ) {
+      const ads = data.filter(
+        (c) =>
+          c.entity === "Product Ad" &&
+          c.state === "enabled" &&
+          c.asin === p.asin
+      );
+
+      if (ads.length >= 2) {
+        dupAds = [
+          ...dupAds,
+          {
+            title: p.title,
+            asin: p.asin,
+          },
+        ];
+      }
+    }
+  });
+
+  dupAds.forEach((x) => {
+    console.log(`${x.title}\t${x.asin}`);
+  });
+};
+
 //--- calc stats on target types
 
 const calcTargetStats = (data) => {
@@ -1469,13 +1536,17 @@ const calcTargetStats = (data) => {
     }
   });
 
-  console.log('Target\timpressions\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS');
+  console.log(
+    "Target\timpressions\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS"
+  );
 
   Object.keys(stats).forEach((k) => {
     const s = stats[k];
 
     console.log(
-      `${k}\t${s.impressions}\t${s.clicks}\t${format2dp(s.clicks/s.impressions * 100)}%\t$${format2dp(s.spend/s.clicks)}\t${s.orders}\t$${format2dp(
+      `${k}\t${s.impressions}\t${s.clicks}\t${format2dp(
+        (s.clicks / s.impressions) * 100
+      )}%\t$${format2dp(s.spend / s.clicks)}\t${s.orders}\t$${format2dp(
         s.spend
       )}\t$${format2dp(s.sales)}\t${
         s.orders > 0 ? format2dp((s.spend / s.sales) * 100) : "-"
@@ -1707,6 +1778,18 @@ const main = () => {
       break;
     }
 
+    case "--no-ads": {
+      listNoAds(data, products);
+
+      break;
+    }
+
+    case "--dup-ads": {
+      listDupAds(data, products);
+
+      break;
+    }
+
     case "--purge": {
       listPurgeable(data, products);
 
@@ -1746,6 +1829,8 @@ const main = () => {
       console.log("--purge\t\tOutput unsold for purging");
       console.log("--designs\t\tList designs without US t-shirts");
       console.log("--targets\t\tShow ACOS by target type");
+      console.log("--no-ads\t\tShow products without a campaign");
+      console.log("--dup-ads\t\tShow products with multiple campaigns");
       console.log("--all\t\tProcess all");
     }
   }
