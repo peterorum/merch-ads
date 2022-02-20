@@ -17,7 +17,7 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.49;
+const maximumAutoBid = 0.48;
 const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.65;
@@ -28,6 +28,8 @@ const defaultPerfKeywordBid = 0.4;
 const defaultPerfProductBid = 0.2;
 
 const targetAcos = 25;
+
+const maxPrice = 18.99
 
 // one update per keyword
 let keywordIdsUpdated = [];
@@ -1283,8 +1285,10 @@ const handlePerformers = (data, products) => {
 
       const price = products.find((p) => p.asin === asin).price;
 
+      const msg = (price < maxPrice) ? 'Over acos' : '*** Over acos'
+
       console.log(
-        `Over acos - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`
+        `${msg} - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`
       );
     }
   });
