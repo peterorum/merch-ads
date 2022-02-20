@@ -1464,7 +1464,7 @@ const listNoAds = (data, products) => {
 
 //--- list products with duplicate campaigns
 
-const listDuplicateAds = (data, products) => {
+const listDupAds = (data, products) => {
   let dupAds = [];
 
   products.forEach((p) => {
@@ -1475,6 +1475,7 @@ const listDuplicateAds = (data, products) => {
     ) {
       const ads = data.filter(
         (c) =>
+          /auto$/i.test(c.campaignNameInfo) &&
           c.entity === "Product Ad" &&
           c.state === "enabled" &&
           c.asin === p.asin
@@ -1486,6 +1487,7 @@ const listDuplicateAds = (data, products) => {
           {
             title: p.title,
             asin: p.asin,
+            ads: ads.map(c => c.campaignNameInfo).join(',')
           },
         ];
       }
@@ -1493,7 +1495,7 @@ const listDuplicateAds = (data, products) => {
   });
 
   dupAds.forEach((x) => {
-    console.log(`${x.title}\t${x.asin}`);
+    console.log(`${x.title}\t${x.asin}\t${x.ads}`);
   });
 };
 
