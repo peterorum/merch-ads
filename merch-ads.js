@@ -17,7 +17,7 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.47;
+const maximumAutoBid = 0.46;
 const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.65;
@@ -1273,7 +1273,9 @@ const handlePerformers = (data, products) => {
 
       k.bid = increaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
-      console.log(`Under acos - ${k.campaignNameInfo}, new bid ${k.bid}`);
+      console.log(
+        `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
+      );
     } else {
       // decrease bid if over acos
 
@@ -1285,10 +1287,10 @@ const handlePerformers = (data, products) => {
 
       const price = products.find((p) => p.asin === asin).price;
 
-      const msg = price < maxPrice ? "Over acos" : "*** Over acos";
+      const msg = price < maxPrice ? "*** Over acos" : "Over acos";
 
       console.log(
-        `${msg} - ${k.campaignNameInfo}, ${asin}, $${price}, new bid ${k.bid}`
+        `${msg} - ${k.campaignNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
       );
     }
   });
@@ -1435,6 +1437,20 @@ const listPurgeable = (data, products) => {
 const listNoAds = (data, products) => {
   let noAds = [];
 
+  const tshirts = products.filter(
+    (p) =>
+      p.productType === "Standard T-Shirt" &&
+      p.marketplace === "US" &&
+      p.status !== "Removed"
+  );
+
+  const autoCampaigns = data.filter(
+    (d) => d.entity === "Campaign" && d.targetingType === "AUTO"
+  );
+
+  console.log(`Tshirts: ${tshirts.length}`);
+  console.log(`Auto campaigns: ${autoCampaigns.length}`);
+
   products.forEach((p) => {
     if (
       p.productType === "Standard T-Shirt" &&
@@ -1487,7 +1503,7 @@ const listDupAds = (data, products) => {
           {
             title: p.title,
             asin: p.asin,
-            ads: ads.map(c => c.campaignNameInfo).join(',')
+            ads: ads.map((c) => c.campaignNameInfo).join(","),
           },
         ];
       }
