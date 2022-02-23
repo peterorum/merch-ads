@@ -1445,22 +1445,25 @@ const listNoAds = (data, products) => {
   );
 
   const autoCampaigns = data.filter(
-    (d) => d.entity === "Campaign" && d.targetingType === "AUTO" && d.state === 'enabled'
+    (d) =>
+      d.entity === "Campaign" &&
+      d.targetingType === "AUTO" &&
+      d.state === "enabled"
   );
 
   console.log(`Tshirts: ${tshirts.length}`);
   console.log(`Auto campaigns: ${autoCampaigns.length}`);
 
-  products.forEach((p) => {
+  tshirts.forEach((p) => {
     if (
-      p.productType === "Standard T-Shirt" &&
-      p.marketplace === "US" &&
-      p.status !== "Removed" &&
       !data.find(
         (c) =>
           c.entity === "Product Ad" &&
           c.state === "enabled" &&
-          c.asin === p.asin
+          c.asin === p.asin &&
+          autoCampaigns.find((a) => a.campaignId === c.campaignId) &&
+          // ensure single asin campaign
+          data.filter(d => d.campaignId === c.campaignId && d.entity === "Product Ad" && d.state === "enabled").length === 1
       )
     ) {
       noAds = [
