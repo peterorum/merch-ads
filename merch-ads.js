@@ -1445,7 +1445,7 @@ const listNoAds = (data, products) => {
   );
 
   const autoCampaigns = data.filter(
-    (d) => d.entity === "Campaign" && d.targetingType === "AUTO"
+    (d) => d.entity === "Campaign" && d.targetingType === "AUTO" && d.state === 'enabled'
   );
 
   console.log(`Tshirts: ${tshirts.length}`);
