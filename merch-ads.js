@@ -7,8 +7,8 @@ const { differenceInDays, parse, sub } = require("date-fns");
 const { utcToZonedTime, format } = require("date-fns-tz");
 
 // tab-separated files
-const dataFile = "data/data.txt";
-const salesFile = "data/sales.txt";
+const dataFile = "data/bulk.txt";
+const salesFile = "data/Sponsored Products Search term report.txt";
 const productFile = "data/productor-export.txt";
 
 const missingAsins = require("./data/missing-asins.json");
@@ -17,7 +17,7 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.45;
+const maximumAutoBid = 0.44;
 const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.66;
@@ -1432,6 +1432,14 @@ const listPurgeable = (data, products) => {
   });
 };
 
+//--- reconcile ads & products
+
+const auditAds = (data, products) => {
+  listNoAds(data, products);
+  listDupAds(data, products);
+  listNoProducts(data, products);
+};
+
 //--- list products with no auto campaign
 
 const listNoAds = (data, products) => {
@@ -1451,8 +1459,10 @@ const listNoAds = (data, products) => {
       d.state === "enabled"
   );
 
-  console.log(`Tshirts: ${tshirts.length}`);
-  console.log(`Auto campaigns: ${autoCampaigns.length}`);
+  if (tshirts.length !== autoCampaigns.length) {
+    console.log(`Tshirts: ${tshirts.length}`);
+    console.log(`Auto campaigns: ${autoCampaigns.length}`);
+  }
 
   tshirts.forEach((p) => {
     if (
@@ -1463,7 +1473,12 @@ const listNoAds = (data, products) => {
           c.asin === p.asin &&
           autoCampaigns.find((a) => a.campaignId === c.campaignId) &&
           // ensure single asin campaign
-          data.filter(d => d.campaignId === c.campaignId && d.entity === "Product Ad" && d.state === "enabled").length === 1
+          data.filter(
+            (d) =>
+              d.campaignId === c.campaignId &&
+              d.entity === "Product Ad" &&
+              d.state === "enabled"
+          ).length === 1
       )
     ) {
       noAds = [
@@ -1477,7 +1492,50 @@ const listNoAds = (data, products) => {
   });
 
   noAds.forEach((x) => {
-    console.log(`${x.title}\t${x.asin}`);
+    console.log(`Product withut ad: ${x.title}\t${x.asin}`);
+  });
+};
+
+//--- list ads with no products
+
+const listNoProducts = (data, products) => {
+  let noProducts = [];
+
+  const tshirts = products.filter(
+    (p) =>
+      p.productType === "Standard T-Shirt" &&
+      p.marketplace === "US" &&
+      p.status !== "Removed"
+  );
+
+  const autoCampaigns = data.filter(
+    (d) =>
+      d.entity === "Campaign" &&
+      d.targetingType === "AUTO" &&
+      d.state === "enabled"
+  );
+
+  autoCampaigns.forEach((c) => {
+    const asin = data.find(
+      (d) =>
+        d.campaignId === c.campaignId &&
+        d.entity === "Product Ad" &&
+        d.state === "enabled"
+    ).asin;
+
+    if (!products.find((p) => p.asin === asin)) {
+      noProducts = [
+        ...noProducts,
+        {
+          campaign: c.campaignName,
+          asin,
+        },
+      ];
+    }
+  });
+
+  noProducts.forEach((x) => {
+    console.log(`Campaign without live product: ${x.campaign}\t${x.asin}`);
   });
 };
 
@@ -1514,7 +1572,7 @@ const listDupAds = (data, products) => {
   });
 
   dupAds.forEach((x) => {
-    console.log(`${x.title}\t${x.asin}\t${x.ads}`);
+    console.log(`Duplicate Ad: ${x.title}\t${x.asin}\t${x.ads}`);
   });
 };
 
@@ -1799,14 +1857,8 @@ const main = () => {
       break;
     }
 
-    case "--no-ads": {
-      listNoAds(data, products);
-
-      break;
-    }
-
-    case "--dup-ads": {
-      listDupAds(data, products);
+    case "--audit": {
+      auditAds(data, products);
 
       break;
     }
@@ -1826,6 +1878,7 @@ const main = () => {
       handleLowCtr(data);
       raiseBidsOnLowImpressions(data);
       resetMaxBids(data);
+      auditAds(data, products);
 
       break;
     }
@@ -1850,8 +1903,7 @@ const main = () => {
       console.log("--purge\t\tOutput unsold for purging");
       console.log("--designs\t\tList designs without US t-shirts");
       console.log("--targets\t\tShow ACOS by target type");
-      console.log("--no-ads\t\tShow products without a campaign");
-      console.log("--dup-ads\t\tShow products with multiple campaigns");
+      console.log("--audit\t\tReconcile products & campaigns");
       console.log("--all\t\tProcess all");
     }
   }
