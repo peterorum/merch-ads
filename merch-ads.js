@@ -17,7 +17,7 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.44;
+const maximumAutoBid = 0.43;
 const maximumTestBid = 0.6;
 const maximumProdBid = 0.55;
 const maximumPerfBid = 0.66;
@@ -673,13 +673,15 @@ const createKeywordPromotionCampaigns = (data, sales) => {
   const autoCampaigns = allCampaigns.filter((d) => d.targetingType === "AUTO");
 
   // ignore product orders, and keywords orders with more than 4 words or just 1
+  // and contains shirt or apparel
 
   let campaignsWithOrders = sales.filter(
     (s) =>
       s.orders > 0 &&
       !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm) &&
       s.customerSearchTerm.split(/ /).length <= 4 &&
-      s.customerSearchTerm.split(/ /).length > 1
+      s.customerSearchTerm.split(/ /).length > 1 &&
+      /(shirt|apparel)/gi.test(s.customerSearchTerm)
   );
 
   let newCampaigns = [];
@@ -1492,7 +1494,7 @@ const listNoAds = (data, products) => {
   });
 
   noAds.forEach((x) => {
-    console.log(`Product withut ad: ${x.title}\t${x.asin}`);
+    console.log(`Product without ad: ${x.title}\t${x.asin}`);
   });
 };
 
