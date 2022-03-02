@@ -1344,6 +1344,7 @@ const lowerBidsOnLowSales = (data) => {
   const keywords = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.bid > minimumBid &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -1423,19 +1424,21 @@ const handlePerformers = (data, products) => {
     } else {
       // decrease bid if over acos
 
-      k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo);
+      if (k.bid > minimumBid) {
+        k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
-      let asin = data.find(
-        (c) => c.campaignId === k.campaignId && c.entity === "Product Ad"
-      ).asin;
+        let asin = data.find(
+          (c) => c.campaignId === k.campaignId && c.entity === "Product Ad"
+        ).asin;
 
-      const price = products.find((p) => p.asin === asin).price;
+        const price = products.find((p) => p.asin === asin).price;
 
-      const msg = price < maxPrice ? "*** Over acos" : "Over acos";
+        const msg = price < maxPrice ? "*** Over acos" : "Over acos";
 
-      console.log(
-        `${msg} - ${k.campaignNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
-      );
+        console.log(
+          `${msg} - ${k.campaignNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
+        );
+      }
     }
   });
 
@@ -1460,6 +1463,7 @@ const handleLowCtr = (data) => {
   const targets = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.bid > minimumBid &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
@@ -1499,6 +1503,7 @@ const handleHighSpend = (data) => {
   const targets = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.bid > minimumBid &&
       // keyword
       ((c.entity === "Keyword" &&
         (c.matchType === "broad" || c.matchType === "exact")) ||
