@@ -20,7 +20,7 @@ const minimumBid = 0.02;
 const maximumAutoBid = 0.43;
 const maximumTestBid = 0.61;
 const maximumProdBid = 0.55;
-const maximumPerfBid = 0.66;
+const maximumPerfBid = 0.67;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -408,7 +408,6 @@ const outputRecords = (db) => {
     } else if (d.entity === "Product Targeting") {
       recordKey = `P-${d.productTargetingId}`;
     }
-
 
     if (
       d.operation !== "update" ||
@@ -948,8 +947,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
   // find enabled campaigns
 
   const testCampaignsWithOrders = campaignsWithOrders.filter((co) =>
-
-  testCampaigns.find(
+    testCampaigns.find(
       (ac) => ac.campaignName === co.campaignName && ac.state === "enabled"
     )
   );
@@ -1036,7 +1034,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
     const newPerfKeywordRecords = createNewKeywordRecords({
       newCampaign: [],
       campaignId: perfCampaign.campaignId,
-      adGroupId : perfAdGroupId,
+      adGroupId: perfAdGroupId,
       customerSearchTerm: co.customerSearchTerm,
       matchType: "exact",
       autoCampaign,
@@ -1210,9 +1208,7 @@ const createProductPromotionCampaigns = (data, sales) => {
   outputRecords(newCampaigns);
 };
 
-// up the bid by a percentage
-
-const increaseBid = (bid, percentage, campaignName) => {
+function getMaximumBid(campaignName) {
   let maximumBid = maximumAutoBid;
 
   if (/test$/i.test(campaignName)) {
@@ -1222,6 +1218,13 @@ const increaseBid = (bid, percentage, campaignName) => {
   } else if (/perf$/i.test(campaignName)) {
     maximumBid = maximumPerfBid;
   }
+  return maximumBid;
+}
+
+// up the bid by a percentage
+
+const increaseBid = (bid, percentage, campaignName) => {
+  let maximumBid = getMaximumBid(campaignName);
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
@@ -1232,12 +1235,14 @@ const increaseBid = (bid, percentage, campaignName) => {
 
 // up the bid by a percentage
 
-const decreaseBid = (bid, percentage) => {
+const decreaseBid = (bid, percentage, campaignName) => {
+  let maximumBid = getMaximumBid(campaignName);
+
   const bid1 = 100 * (bid || defaultAutoBid);
 
   const newBid = Math.floor(bid1 - (bid1 * percentage) / 100);
 
-  return Math.min(Math.max(newBid / 100, minimumBid), maximumAutoBid);
+  return Math.min(Math.max(newBid / 100, minimumBid), maximumBid);
 };
 
 // add general negatives to a campaign
@@ -1295,6 +1300,7 @@ const raiseBidsOnLowImpressions = (data) => {
     (c) =>
       c.state === "enabled" &&
       c.impressions < fewImpressions &&
+      (!c.bid || c.bid < getMaximumBid(c.campaignNameInfo)) &&
       oldCampaigns.find((oc) => oc.campaignId === c.campaignId) &&
       // keyword
       ((c.entity === "Keyword" &&
@@ -1357,7 +1363,7 @@ const lowerBidsOnLowSales = (data) => {
   );
 
   keywords.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease);
+    k.bid = decreaseBid(k.bid, percentageDecrease, k.campaignNameInfo);
     k.operation = "update";
 
     if (k.keywordText) {
@@ -1407,15 +1413,17 @@ const handlePerformers = (data, products) => {
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      k.bid = increaseBid(k.bid, percentageChange, k.campaignNameInfo);
+      if (!k.bid || k.bid < getMaximumBid(k.campaignNameInfo)) {
+        k.bid = increaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
-      console.log(
-        `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
-      );
+        console.log(
+          `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
+        );
+      }
     } else {
       // decrease bid if over acos
 
-      k.bid = decreaseBid(k.bid, percentageChange);
+      k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
       let asin = data.find(
         (c) => c.campaignId === k.campaignId && c.entity === "Product Ad"
@@ -1467,7 +1475,7 @@ const handleLowCtr = (data) => {
   );
 
   targets.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease);
+    k.bid = decreaseBid(k.bid, percentageDecrease, k.campaignNameInfo);
     k.operation = "update";
 
     console.log(`Low ctr - ${k.campaignNameInfo}, new bid ${k.bid}`);
@@ -1506,7 +1514,7 @@ const handleHighSpend = (data) => {
   );
 
   targets.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease);
+    k.bid = decreaseBid(k.bid, percentageDecrease, k.campaignNameInfo);
     console.log(`High spend - ${k.campaignNameInfo}, new bid ${k.bid}`);
     k.operation = "update";
   });
