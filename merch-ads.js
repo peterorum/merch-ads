@@ -17,9 +17,9 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.43;
+const maximumAutoBid = 0.42;
 const maximumTestBid = 0.61;
-const maximumProdBid = 0.55;
+const maximumProdBid = 0.56;
 const maximumPerfBid = 0.67;
 
 const defaultAutoBid = 0.2;
@@ -71,6 +71,7 @@ const blank = {
   productTargetingExpression: "",
   impressions: 0,
   clicks: 0,
+  clickThroughRate: 0,
   spend: 0,
   sales: 0,
   orders: 0,
@@ -126,6 +127,7 @@ const loadData = () => {
         productTargetingExpression,
         impressions,
         clicks,
+        clickThroughRate,
         spend,
         sales,
         orders,
@@ -171,6 +173,7 @@ const loadData = () => {
         productTargetingExpression,
         impressions,
         clicks,
+        clickThroughRate,
         spend,
         sales,
         orders,
@@ -662,6 +665,7 @@ const createNewProductCampaign = ({
 
 // 1. Search for orders in Auto camaigns, on a keyword.
 // 2. Create Test & Perf campaigns if nec., with Broad and Exact ad groups.
+//    Add group names must be same as in Auto.
 // 3. Add the Term as a neg phrase and neg exact to the Auto
 // 4. Add as Broad to Test, and neg exact. 0.2
 // 5. Add as exact to Perf. 0.4
@@ -672,7 +676,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
   const autoCampaigns = allCampaigns.filter((d) => d.targetingType === "AUTO");
 
   // ignore product orders, and keywords orders with more than 4 words or just 1
-  // and contains shirt or apparel
+  // and must contain shirt or apparel
 
   let campaignsWithOrders = sales.filter(
     (s) =>
@@ -1607,11 +1611,6 @@ const listNoAds = (data, products) => {
       d.targetingType === "AUTO" &&
       d.state === "enabled"
   );
-
-  if (tshirts.length !== autoCampaigns.length) {
-    console.log(`Tshirts: ${tshirts.length}`);
-    console.log(`Auto campaigns: ${autoCampaigns.length}`);
-  }
 
   tshirts.forEach((p) => {
     if (
