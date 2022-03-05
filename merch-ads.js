@@ -704,7 +704,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
   const newTestCampaigns = [];
   const newPerfCampaigns = [];
 
-  [autoCampaignsWithOrders[0]].forEach((co) => { ////////////////
+  autoCampaignsWithOrders.forEach((co) => {
     const autoCampaign = allCampaigns.find(
       (c) => c.campaignName === co.campaignName
     );
@@ -785,7 +785,9 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
         !data.find(
           (d) =>
             !allCampaigns.find((c) => testRegex.test(d.campaign)) &&
-            d.adGroupNameInfo === autoAdGroup.adGroupName &&
+            (d.adGroupNameInfo === autoAdGroup.adGroupName ||
+              (d.adGroupNameInfo === "Broad" &&
+                /^(Auto)|(Ad Group)/i.test(autoAdGroup.adGroupName))) &&
             d.entity === "Keyword" &&
             d.keywordText === co.customerSearchTerm
         )
@@ -988,8 +990,19 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
 
     const autoRegex = new RegExp(`^${baseCampaignName} Auto$`);
 
+    const adGroupName = co.adGroupName;
+
     const autoCampaign = allCampaigns.find((c) =>
       autoRegex.test(c.campaignName)
+    );
+
+    const autoAdGroup = data.find(
+      (x) =>
+        x.entity === "Ad Group" &&
+        x.campaignId === autoCampaign.campaignId &&
+        (x.adGroupName === adGroupName ||
+          (/auto|ad group/i.test(x.adGroupName) && adGroupName === "Broad")) &&
+        x.state === "enabled"
     );
 
     console.log(
@@ -998,8 +1011,6 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
       " - ",
       co.customerSearchTerm
     );
-
-    const adGroupName = co.adGroupName;
 
     const testAdGroup = data.find(
       (x) =>
@@ -1047,6 +1058,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
       customerSearchTerm: co.customerSearchTerm,
       matchType: "broad",
       autoCampaign,
+      autoAdGroup,
       bid: defaultTestBid,
     });
 
@@ -1061,6 +1073,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
       customerSearchTerm: co.customerSearchTerm,
       matchType: "exact",
       autoCampaign,
+      autoAdGroup,
       bid: defaultPerfKeywordBid,
     });
 
@@ -1215,7 +1228,6 @@ const createProductPromotionCampaigns = (data, sales) => {
               (x.adGroupNameInfo === adGroupName ||
                 (x.adGroupNameInfo === "Product" &&
                   /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
-
               x.state === "enabled"
           ).adGroupId;
         }
@@ -1965,6 +1977,12 @@ const main = () => {
       break;
     }
 
+    case "--promote-test": {
+      createTestKeywordPromotionCampaigns(data, sales);
+
+      break;
+    }
+
     case "--promote-product": {
       createProductPromotionCampaigns(data, sales);
 
@@ -2062,6 +2080,7 @@ const main = () => {
       console.log(
         "--promote-keyword\t\tCreate test & perf campaigns from search terms"
       );
+      console.log("--promote-test\t\tUpdate perf adgroup from test");
       console.log("--promote-product\t\tCreate perf adgroup from products");
       console.log("--impress\t\tUp bids on low impression targets");
       console.log("--lowsales\t\tAdjust bids if high clicks but low sales");
