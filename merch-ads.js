@@ -461,7 +461,7 @@ const createNewKeywordRecords = ({
   adGroupId,
   customerSearchTerm,
   matchType,
-  autoCampaign,
+  autoAdGroup,
   bid,
 }) => {
   newCampaign = [
@@ -479,29 +479,31 @@ const createNewKeywordRecords = ({
     },
   ];
 
-  // add negative exact or phrase for auto campaign
+  // add negative exact or phrase for auto adGroup
   newCampaign = [
     ...newCampaign,
     {
       ...blank,
-      entity: "Campaign Negative Keyword",
+      entity: "Negative Keyword",
       operation: "create",
-      campaignId: autoCampaign.campaignId,
+      campaignId: autoAdGroup.campaignId,
+      adGroupId: autoAdGroup.adGroupId,
       keywordText: customerSearchTerm,
       matchType: matchType === "exact" ? "negativeExact" : "negativePhrase",
       state: "enabled",
     },
   ];
 
-  // if adding as broad, then add as neg exact to the broad campaign
+  // if adding as broad, then add as neg exact to the broad campaign adGroup
   if (matchType === "broad") {
     newCampaign = [
       ...newCampaign,
       {
         ...blank,
-        entity: "Campaign Negative Keyword",
+        entity: "Negative Keyword",
         operation: "create",
         campaignId,
+        adGroupId,
         keywordText: customerSearchTerm,
         matchType: "negativeExact",
         state: "enabled",
@@ -702,25 +704,27 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
   const newTestCampaigns = [];
   const newPerfCampaigns = [];
 
-  autoCampaignsWithOrders.forEach((co) => {
+  [autoCampaignsWithOrders[0]].forEach((co) => { ////////////////
     const autoCampaign = allCampaigns.find(
       (c) => c.campaignName === co.campaignName
     );
 
-    const baseCampaignName = co.campaignName.replace(/( Auto)|( A)$/, "");
+    const baseCampaignName = co.campaignName.replace(/ Auto$/, "");
 
-    const autoAdGroupId = data.find(
+    const adGroupName = co.adGroupName;
+
+    const autoAdGroup = data.find(
       (x) =>
         x.entity === "Ad Group" &&
         x.campaignId === autoCampaign.campaignId &&
+        x.adGroupName === adGroupName &&
         x.state === "enabled"
-    ).adGroupId;
+    );
 
     // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
-    // assumes single asin campaigns
 
     let asin = data.find(
-      (c) => c.campaignNameInfo === co.campaignName && c.entity === "Product Ad"
+      (c) => c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
     ).asin;
 
     if (!asin) {
@@ -736,7 +740,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 
     //--- check for existing Test campaign
 
-    const testRegex = new RegExp(`^${baseCampaignName} (T|Test)$`);
+    const testRegex = new RegExp(`^${baseCampaignName} Test$`);
     const newTestCampaignName = baseCampaignName + " Test";
 
     const existingTestCampaign = allCampaigns.find((c) =>
@@ -759,12 +763,11 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 
       newTestCampaigns.push(baseCampaignName);
 
-      const adGroupName = "Broad";
+      const adGroupName = autoAdGroup.adGroupName;
 
       const testCampaign = createNewKeywordCampaign({
         newCampaignName: newTestCampaignName,
         autoCampaign,
-        autoAdGroupId,
         adGroupName,
         adGroupId: newTestCampaignName + " " + adGroupName,
         asin,
@@ -782,6 +785,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
         !data.find(
           (d) =>
             !allCampaigns.find((c) => testRegex.test(d.campaign)) &&
+            d.adGroupNameInfo === autoAdGroup.adGroupName &&
             d.entity === "Keyword" &&
             d.keywordText === co.customerSearchTerm
         )
@@ -794,7 +798,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
         );
 
         // default if new
-        let adGroupId = newTestCampaignName + " " + "Broad";
+        let adGroupId = newTestCampaignName + " " + adGroupName;
 
         let campaignId = newTestCampaignName;
 
@@ -802,10 +806,16 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
         if (existingTestCampaign) {
           campaignId = existingTestCampaign.campaignId;
 
+          // find matching ad group name
+          // or use Broad for legacy names
+
           adGroupId = data.find(
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingTestCampaign.campaignId &&
+              (x.adGroupNameInfo === adGroupName ||
+                (x.adGroupNameInfo === "Broad" &&
+                  /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
               x.state === "enabled"
           ).adGroupId;
         }
@@ -816,7 +826,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
           matchType: "broad",
-          autoCampaign,
+          autoAdGroup,
           bid: defaultTestBid,
         });
 
@@ -849,12 +859,11 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 
       newPerfCampaigns.push(baseCampaignName);
 
-      const adGroupName = "Exact";
+      const adGroupName = autoAdGroup.adGroupNameInfo;
 
       const perfCampaign = createNewKeywordCampaign({
         newCampaignName: newPerfCampaignName,
         autoCampaign,
-        autoAdGroupId,
         adGroupName,
         adGroupId: newPerfCampaignName + " " + adGroupName,
         asin,
@@ -896,6 +905,9 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingPerfCampaign.campaignId &&
+              (x.adGroupNameInfo === adGroupName ||
+                (x.adGroupNameInfo === "Exact" &&
+                  /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
               x.state === "enabled"
           ).adGroupId;
         }
@@ -987,17 +999,24 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
       co.customerSearchTerm
     );
 
-    const testAdGroupId = data.find(
+    const adGroupName = co.adGroupName;
+
+    const testAdGroup = data.find(
       (x) =>
         x.entity === "Ad Group" &&
         x.campaignId === testCampaign.campaignId &&
+        (x.adGroupNameInfo === adGroupName ||
+          (x.adGroupNameInfo === "Broad" &&
+            /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
         x.state === "enabled"
     ).adGroupId;
 
-    const perfAdGroupId = data.find(
+    const perfAdGroup = data.find(
       (x) =>
         x.entity === "Ad Group" &&
         x.campaignId === perfCampaign.campaignId &&
+        (x.adGroupName === adGroupName ||
+          (x.adGroupName === "Exact" && adGroupName === "Broad")) && // legacy
         x.state === "enabled"
     ).adGroupId;
 
@@ -1005,7 +1024,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
     // assumes single asin campaigns
 
     let asin = data.find(
-      (c) => c.campaignNameInfo === co.campaignName && c.entity === "Product Ad"
+      (c) => c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
     ).asin;
 
     if (!asin) {
@@ -1024,7 +1043,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
     const newTestKeywordRecords = createNewKeywordRecords({
       newCampaign: [],
       campaignId: testCampaign.campaignId,
-      adGroupId: testAdGroupId,
+      adGroupId: testAdGroup.adGroupId,
       customerSearchTerm: co.customerSearchTerm,
       matchType: "broad",
       autoCampaign,
@@ -1038,7 +1057,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
     const newPerfKeywordRecords = createNewKeywordRecords({
       newCampaign: [],
       campaignId: perfCampaign.campaignId,
-      adGroupId: perfAdGroupId,
+      adGroupId: perfAdGroup.adGroupIdId,
       customerSearchTerm: co.customerSearchTerm,
       matchType: "exact",
       autoCampaign,
@@ -1079,7 +1098,7 @@ const createProductPromotionCampaigns = (data, sales) => {
     )
   );
 
-  // for each keyword, create a perf campaign if nec
+  // for each product, create a prod campaign if nec
 
   const newProdCampaigns = [];
 
@@ -1088,20 +1107,22 @@ const createProductPromotionCampaigns = (data, sales) => {
       (c) => c.campaignName === co.campaignName
     );
 
+    const adGroupName = co.adGroupName;
+
     const baseCampaignName = co.campaignName.replace(/ Auto$/, "");
 
-    const autoAdGroupId = data.find(
+    const autoAdGroup = data.find(
       (x) =>
         x.entity === "Ad Group" &&
         x.campaignId === autoCampaign.campaignId &&
+        x.adGroupName === adGroupName &&
         x.state === "enabled"
     ).adGroupId;
 
     // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
-    // assumes single asin campaigns
 
     let asin = data.find(
-      (c) => c.campaignNameInfo === co.campaignName && c.entity === "Product Ad"
+      (c) => c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
     ).asin;
 
     if (!asin) {
@@ -1147,7 +1168,7 @@ const createProductPromotionCampaigns = (data, sales) => {
       const perfCampaign = createNewProductCampaign({
         newCampaignName: newProdCampaignName,
         autoCampaign,
-        autoAdGroupId,
+        autoAdGroupId: autoAdGroup.adGroupId,
         adGroupName,
         adGroupId: newProdCampaignName + " " + adGroupName,
         asin,
@@ -1165,6 +1186,7 @@ const createProductPromotionCampaigns = (data, sales) => {
         !data.find(
           (d) =>
             d.campaignId === existingProdCampaign.campaignId &&
+            d.adGroupNameInfo === autoAdGroup.adGroupName &&
             d.entity === "Product Targeting" &&
             d.productTargetingExpression.toLowerCase() ===
               asinSearchTerm.toLowerCase()
@@ -1190,6 +1212,10 @@ const createProductPromotionCampaigns = (data, sales) => {
             (x) =>
               x.entity === "Ad Group" &&
               x.campaignId === existingProdCampaign.campaignId &&
+              (x.adGroupNameInfo === adGroupName ||
+                (x.adGroupNameInfo === "Product" &&
+                  /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
+
               x.state === "enabled"
           ).adGroupId;
         }
@@ -1200,7 +1226,7 @@ const createProductPromotionCampaigns = (data, sales) => {
           adGroupId,
           customerSearchTerm: co.customerSearchTerm,
           autoCampaign,
-          autoAdGroupId,
+          autoAdGroupId: autoAdGroup.adGroupId,
           bid: defaultPerfProductBid,
         });
 
