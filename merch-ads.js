@@ -1130,7 +1130,7 @@ const createProductPromotionCampaigns = (data, sales) => {
         x.campaignId === autoCampaign.campaignId &&
         x.adGroupName === adGroupName &&
         x.state === "enabled"
-    ).adGroupId;
+    );
 
     // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
 
@@ -1176,7 +1176,7 @@ const createProductPromotionCampaigns = (data, sales) => {
 
       newProdCampaigns.push(baseCampaignName);
 
-      const adGroupName = "Product";
+      const adGroupName = autoAdGroup.adGroupName;
 
       const perfCampaign = createNewProductCampaign({
         newCampaignName: newProdCampaignName,
@@ -1199,7 +1199,9 @@ const createProductPromotionCampaigns = (data, sales) => {
         !data.find(
           (d) =>
             d.campaignId === existingProdCampaign.campaignId &&
-            d.adGroupNameInfo === autoAdGroup.adGroupName &&
+            (d.adGroupNameInfo === autoAdGroup.adGroupName ||
+              (d.adGroupNameInfo === "Product" &&
+                /^(Auto)|(Ad Group)/i.test(autoAdGroup.adGroupName))) &&
             d.entity === "Product Targeting" &&
             d.productTargetingExpression.toLowerCase() ===
               asinSearchTerm.toLowerCase()
@@ -1213,7 +1215,7 @@ const createProductPromotionCampaigns = (data, sales) => {
         );
 
         // default if new
-        let adGroupId = newProdCampaignName + " " + "Product";
+        let adGroupId = newProdCampaignName + " " + autoAdGroup.adGroupName;
 
         let campaignId = newProdCampaignName;
 
