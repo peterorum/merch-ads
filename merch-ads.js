@@ -1689,14 +1689,7 @@ const listNoAds = (data, products) => {
           c.entity === "Product Ad" &&
           c.state === "enabled" &&
           c.asin === p.asin &&
-          autoCampaigns.find((a) => a.campaignId === c.campaignId) &&
-          // ensure single asin campaign
-          data.filter(
-            (d) =>
-              d.campaignId === c.campaignId &&
-              d.entity === "Product Ad" &&
-              d.state === "enabled"
-          ).length === 1
+          autoCampaigns.find((a) => a.campaignId === c.campaignId)
       )
     ) {
       noAds = [
