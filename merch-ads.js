@@ -389,7 +389,7 @@ const loadProducts = () => {
 const outputRecord = (d) => {
   if (!d.keywordId || !keywordIdsUpdated.find((x) => x === d.keywordId)) {
     // prettier-ignore
-    const s = `${d.product}\t${d.entity}\t${d.operation}\t${d.campaignId}\t${d.adGroupId}\t${d.portfolioId}\t${d.adId}\t${d.keywordId}\t${d.productTargetingId}\t${d.campaignName}\t${d.adGroupName}\t${d.startDate}\t${d.endDate}\t${d.targetingType}\t${d.state}\t${d.dailyBudget}\t${d.sku}\t${d.asin}\t${d.adGroupDefaultBid}\t${d.bid}\t${d.keywordText}\t${d.matchType}\t${d.biddingStrategy}\t${d.placement}\t${d.percentage}\t${d.productTargetingExpression}\t${d.impressions}\t${d.clicks}\t${d.spend}\t${d.sales}\t${d.orders}\t${d.units}\t${d.conversionRate}\t${d.acos}\t${d.cpc}\t${d.roas}\t${d.campaignNameInfo}\t${d.adGroupNameInfo}\t${d.campaignStateInfo}\t${d.adGroupStateInfo}\t${d.adGroupDefaultBidInfo}\t${d.resolvedProductTargetingExpressionInfo}\n`
+    const s = `${d.product}\t${d.entity}\t${d.operation}\t${d.campaignId}\t${d.adGroupId}\t${d.portfolioId}\t${d.adId}\t${d.keywordId}\t${d.productTargetingId}\t${d.campaignName}\t${d.adGroupName}\t${d.startDate}\t${d.endDate}\t${d.targetingType}\t${d.state}\t${d.dailyBudget}\t${d.sku}\t${d.asin}\t${d.adGroupDefaultBid}\t${d.bid}\t${d.keywordText}\t${d.matchType}\t${d.biddingStrategy}\t${d.placement}\t${d.percentage}\t${d.productTargetingExpression}\t${d.impressions}\t${d.clicks}\t${d.clickThroughRate}\t${d.spend}\t${d.sales}\t${d.orders}\t${d.units}\t${d.conversionRate}\t${d.acos}\t${d.cpc}\t${d.roas}\t${d.campaignNameInfo}\t${d.adGroupNameInfo}\t${d.campaignStateInfo}\t${d.adGroupStateInfo}\t${d.adGroupDefaultBidInfo}\t${d.resolvedProductTargetingExpressionInfo}\n`
 
     assert(resultsFile);
 
@@ -464,14 +464,6 @@ const createNewKeywordRecords = ({
   autoAdGroup,
   bid,
 }) => {
-
-  console.log(adGroupId, customerSearchTerm, matchType);
-
-  assert(adGroupId, "No ad group id")
-
-  if (!adGroupId) {
-    exit();
-  }
 
   newCampaign = [
     ...newCampaign,
@@ -570,7 +562,8 @@ const createNewProductRecords = ({
 const createNewKeywordCampaign = ({
   newCampaignName,
   autoCampaign,
-  adGroupName, // Broad or Exact
+  adGroupName,
+  matchType,
   asin,
   customerSearchTerm,
   bid,
@@ -613,7 +606,7 @@ const createNewKeywordCampaign = ({
     campaignId: newCampaignName,
     adGroupId,
     customerSearchTerm,
-    matchType: adGroupName.toLowerCase(),
+    matchType,
     autoAdGroup,
     bid,
   });
@@ -794,6 +787,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           customerSearchTerm: co.customerSearchTerm,
           bid: defaultTestBid,
           autoAdGroup,
+          matchType: "broad"
         });
 
         newCampaigns = [...newCampaigns, ...testCampaign];
@@ -893,6 +887,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           customerSearchTerm: co.customerSearchTerm,
           bid: defaultPerfKeywordBid,
           autoAdGroup,
+          matchType: "exact"
         });
 
         newCampaigns = [...newCampaigns, ...perfCampaign];
