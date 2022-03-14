@@ -1612,8 +1612,8 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 3.0;
-  const purgeImpressions = 1000;
+  const purgeSpend = 5.0;
+  const purgeImpressions = 1500;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
@@ -1629,28 +1629,25 @@ const listPurgeable = (data, products) => {
 
     // check for no sales
     if (product && product.soldAllTime === 0) {
-      const record = stats[baseCampaignName] || {
+      const record = stats[asin] || {
         asin,
         impressions: 0,
+        baseCampaignName,
         spend: 0,
       };
 
       record.impressions += ac.impressions;
       record.spend += ac.spend;
 
-      stats[baseCampaignName] = record;
+      stats[asin] = record;
     }
   });
-
-  resultsFile.write("Campaign\tasin\timpressions\tspend\n");
 
   Object.keys(stats).forEach((x) => {
     const d = stats[x];
 
     if (d.spend >= purgeSpend || d.impressions >= purgeImpressions) {
-      console.log(`Purge - ${x}, ${d.asin}, ${d.impressions}, ${d.spend}`);
-
-      resultsFile.write(`${x}\t${d.asin}\t${d.impressions}\t${d.spend}\n`);
+      console.log(`Purge - ${x}\t${d.baseCampaignName}\t${d.impressions}\t${d.spend}`);
     }
   });
 };
