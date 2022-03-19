@@ -189,7 +189,8 @@ const loadData = () => {
         adGroupDefaultBidInfo,
         resolvedProductTargetingExpressionInfo,
       };
-    });
+    })
+    .filter((c) => !/^lottery/i.test(c.campaignNameInfo)); // skip lottery campaigns;
 
   const [headings, ...data1] = data;
 
@@ -280,7 +281,8 @@ const loadSales = () => {
         day14AdvertisedASINSales,
         day14BrandHaloASINSales,
       };
-    });
+    })
+    .filter((c) => !/^lottery/i.test(c.campaignName)); // skip lottery campaigns
 
   // skip headings
   const [, ...sales1] = sales;
@@ -464,7 +466,6 @@ const createNewKeywordRecords = ({
   autoAdGroup,
   bid,
 }) => {
-
   newCampaign = [
     ...newCampaign,
     {
@@ -787,7 +788,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           customerSearchTerm: co.customerSearchTerm,
           bid: defaultTestBid,
           autoAdGroup,
-          matchType: "broad"
+          matchType: "broad",
         });
 
         newCampaigns = [...newCampaigns, ...testCampaign];
@@ -887,7 +888,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           customerSearchTerm: co.customerSearchTerm,
           bid: defaultPerfKeywordBid,
           autoAdGroup,
-          matchType: "exact"
+          matchType: "exact",
         });
 
         newCampaigns = [...newCampaigns, ...perfCampaign];
@@ -1647,7 +1648,9 @@ const listPurgeable = (data, products) => {
     const d = stats[x];
 
     if (d.spend >= purgeSpend || d.impressions >= purgeImpressions) {
-      console.log(`Purge - ${x}\t${d.baseCampaignName}\t${d.impressions}\t${d.spend}`);
+      console.log(
+        `Purge - ${x}\t${d.baseCampaignName}\t${d.impressions}\t${d.spend}`
+      );
     }
   });
 };
