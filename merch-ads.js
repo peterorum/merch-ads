@@ -994,6 +994,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
 
   testCampaignsWithOrders.forEach((co) => {
     // only process first occurence (find first object is same as current)
+    // in case multiple orders with same term
 
     if (
       testCampaignsWithOrders.find(
@@ -1016,98 +1017,108 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
         perfRegex.test(c.campaignName)
       );
 
-      const autoRegex = new RegExp(`^${baseCampaignName} Auto$`);
+      // check term is not already in use in perf
 
-      const adGroupName = co.adGroupName;
+      if (
+        !data.find(
+          (c) =>
+            c.campaignId === perfCampaign.campaignId && c.entity === "Keyword"
+        ) &&
+        c.keywordText === co.customerSearchTerm
+      ) {
+        const autoRegex = new RegExp(`^${baseCampaignName} Auto$`);
 
-      const autoCampaign = allCampaigns.find((c) =>
-        autoRegex.test(c.campaignName)
-      );
+        const adGroupName = co.adGroupName;
 
-      const autoAdGroup = data.find(
-        (x) =>
-          x.entity === "Ad Group" &&
-          x.campaignId === autoCampaign.campaignId &&
-          (x.adGroupName === adGroupName ||
-            (/auto|ad group/i.test(x.adGroupName) &&
-              adGroupName === "Broad")) &&
-          x.state === "enabled"
-      );
+        const autoCampaign = allCampaigns.find((c) =>
+          autoRegex.test(c.campaignName)
+        );
 
-      console.log(
-        "Update Test & Perf campaigns - ",
-        baseCampaignName,
-        " - ",
-        co.customerSearchTerm
-      );
+        const autoAdGroup = data.find(
+          (x) =>
+            x.entity === "Ad Group" &&
+            x.campaignId === autoCampaign.campaignId &&
+            (x.adGroupName === adGroupName ||
+              (/auto|ad group/i.test(x.adGroupName) &&
+                adGroupName === "Broad")) &&
+            x.state === "enabled"
+        );
 
-      const testAdGroup = data.find(
-        (x) =>
-          x.entity === "Ad Group" &&
-          x.campaignId === testCampaign.campaignId &&
-          (x.adGroupNameInfo === adGroupName ||
-            (x.adGroupNameInfo === "Broad" &&
-              /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
-          x.state === "enabled"
-      );
+        console.log(
+          "Update Test & Perf campaigns - ",
+          baseCampaignName,
+          " - ",
+          co.customerSearchTerm
+        );
 
-      const perfAdGroup = data.find(
-        (x) =>
-          x.entity === "Ad Group" &&
-          x.campaignId === perfCampaign.campaignId &&
-          (x.adGroupName === adGroupName ||
-            (x.adGroupName === "Exact" && adGroupName === "Broad")) && // legacy
-          x.state === "enabled"
-      );
+        const testAdGroup = data.find(
+          (x) =>
+            x.entity === "Ad Group" &&
+            x.campaignId === testCampaign.campaignId &&
+            (x.adGroupNameInfo === adGroupName ||
+              (x.adGroupNameInfo === "Broad" &&
+                /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
+            x.state === "enabled"
+        );
 
-      // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
-      // assumes single asin campaigns
+        const perfAdGroup = data.find(
+          (x) =>
+            x.entity === "Ad Group" &&
+            x.campaignId === perfCampaign.campaignId &&
+            (x.adGroupName === adGroupName ||
+              (x.adGroupName === "Exact" && adGroupName === "Broad")) && // legacy
+            x.state === "enabled"
+        );
 
-      let asin = data.find(
-        (c) =>
-          c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
-      ).asin;
+        // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
+        // assumes single asin campaigns
 
-      if (!asin) {
-        asin = missingAsins[co.campaignName];
+        let asin = data.find(
+          (c) =>
+            c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
+        ).asin;
+
+        if (!asin) {
+          asin = missingAsins[co.campaignName];
+        }
+
+        if (!asin) {
+          // asin missing from Ad in bulk download for unknown reason
+          console.log("No asin for", co.campaignName);
+          console.log("add to data/missing-asins.json");
+          exit();
+        }
+
+        // add as new broad to test
+
+        const newTestKeywordRecords = createNewKeywordRecords({
+          newCampaign: [],
+          campaignId: testCampaign.campaignId,
+          adGroupId: testAdGroup.adGroupId,
+          customerSearchTerm: co.customerSearchTerm,
+          matchType: "broad",
+          autoCampaign,
+          autoAdGroup,
+          bid: defaultTestBid,
+        });
+
+        newCampaigns = [...newCampaigns, ...newTestKeywordRecords];
+
+        // add as exact to perf
+
+        const newPerfKeywordRecords = createNewKeywordRecords({
+          newCampaign: [],
+          campaignId: perfCampaign.campaignId,
+          adGroupId: perfAdGroup.adGroupId,
+          customerSearchTerm: co.customerSearchTerm,
+          matchType: "exact",
+          autoCampaign,
+          autoAdGroup,
+          bid: defaultPerfKeywordBid,
+        });
+
+        newCampaigns = [...newCampaigns, ...newPerfKeywordRecords];
       }
-
-      if (!asin) {
-        // asin missing from Ad in bulk download for unknown reason
-        console.log("No asin for", co.campaignName);
-        console.log("add to data/missing-asins.json");
-        exit();
-      }
-
-      // add as new broad to test
-
-      const newTestKeywordRecords = createNewKeywordRecords({
-        newCampaign: [],
-        campaignId: testCampaign.campaignId,
-        adGroupId: testAdGroup.adGroupId,
-        customerSearchTerm: co.customerSearchTerm,
-        matchType: "broad",
-        autoCampaign,
-        autoAdGroup,
-        bid: defaultTestBid,
-      });
-
-      newCampaigns = [...newCampaigns, ...newTestKeywordRecords];
-
-      // add as exact to perf
-
-      const newPerfKeywordRecords = createNewKeywordRecords({
-        newCampaign: [],
-        campaignId: perfCampaign.campaignId,
-        adGroupId: perfAdGroup.adGroupId,
-        customerSearchTerm: co.customerSearchTerm,
-        matchType: "exact",
-        autoCampaign,
-        autoAdGroup,
-        bid: defaultPerfKeywordBid,
-      });
-
-      newCampaigns = [...newCampaigns, ...newPerfKeywordRecords];
     }
   });
 
