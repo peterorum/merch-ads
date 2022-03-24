@@ -17,10 +17,10 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.37;
-const maximumTestBid = 0.61;
-const maximumProdBid = 0.56;
-const maximumPerfBid = 0.68;
+const maximumAutoBid = 0.36;
+const maximumTestBid = 0.60;
+const maximumProdBid = 0.57;
+const maximumPerfBid = 0.67;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -682,7 +682,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
   const autoCampaigns = allCampaigns.filter((d) => d.targetingType === "AUTO");
 
   // ignore product orders, and keywords orders with more than 4 words or just 1
-  // and must contain shirt or apparel
+  // and must contain shirt or apparel etc
 
   let campaignsWithOrders = sales.filter(
     (s) =>
@@ -690,7 +690,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
       !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm) &&
       s.customerSearchTerm.split(/ /).length <= 4 &&
       s.customerSearchTerm.split(/ /).length > 1 &&
-      /(shirt|apparel)/gi.test(s.customerSearchTerm)
+      /(shirt|apparel|gift)/gi.test(s.customerSearchTerm)
   );
 
   let newCampaigns = [];
