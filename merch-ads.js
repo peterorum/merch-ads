@@ -19,7 +19,7 @@ const minimumBid = 0.02;
 
 const maximumAutoBid = 0.35;
 const maximumTestBid = 0.55;
-const maximumPerfBid = 0.60;
+const maximumPerfBid = 0.6;
 const maximumProdBid = 0.57;
 
 const defaultAutoBid = 0.2;
@@ -921,15 +921,20 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           if (existingPerfCampaign) {
             campaignId = existingPerfCampaign.campaignId;
 
-            adGroupId = data.find(
-              (x) =>
-                x.entity === "Ad Group" &&
-                x.campaignId === existingPerfCampaign.campaignId &&
-                (x.adGroupNameInfo === adGroupName ||
-                  (/^(Exact|K)$/i.test(x.adGroupNameInfo) &&
-                    /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
-                x.state === "enabled"
-            ).adGroupId;
+            try {
+              adGroupId = data.find(
+                (x) =>
+                  x.entity === "Ad Group" &&
+                  x.campaignId === existingPerfCampaign.campaignId &&
+                  (x.adGroupNameInfo === adGroupName ||
+                    (/^(Exact|K)$/i.test(x.adGroupNameInfo) &&
+                      /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
+                  x.state === "enabled"
+              ).adGroupId;
+            } catch (e) {
+                console.error(`Adgroup not found: ${existingPerfCampaign.campaignNameInfo}, ${adGroupName}`)
+                exit(1);
+              }
           }
 
           const newKeywordRecords = createNewKeywordRecords({
