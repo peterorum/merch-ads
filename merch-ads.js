@@ -18,9 +18,9 @@ const { ca } = require("date-fns/locale");
 const minimumBid = 0.02;
 
 const maximumAutoBid = 0.35;
-const maximumTestBid = 0.59;
+const maximumTestBid = 0.55;
+const maximumPerfBid = 0.60;
 const maximumProdBid = 0.57;
-const maximumPerfBid = 0.66;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
