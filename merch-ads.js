@@ -18,9 +18,12 @@ const { ca } = require("date-fns/locale");
 const minimumBid = 0.02;
 
 const maximumAutoBid = 0.35;
-const maximumTestBid = 0.55;
-const maximumPerfBid = 0.6;
-const maximumProdBid = 0.57;
+const maximumTestBid = 0.45;
+const maximumPerfBid = 0.5;
+const maximumProdBid = 0.55;
+
+// increase of max bid
+const goodAcosBonusFactor = 1.33;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -932,9 +935,11 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
                   x.state === "enabled"
               ).adGroupId;
             } catch (e) {
-                console.error(`Adgroup not found: ${existingPerfCampaign.campaignNameInfo}, ${adGroupName}`)
-                exit(1);
-              }
+              console.error(
+                `Adgroup not found: ${existingPerfCampaign.campaignNameInfo}, ${adGroupName}`
+              );
+              exit(1);
+            }
           }
 
           const newKeywordRecords = createNewKeywordRecords({
@@ -1314,8 +1319,8 @@ function getMaximumBid(campaignName) {
 
 // up the bid by a percentage
 
-const increaseBid = (bid, percentage, campaignName) => {
-  let maximumBid = getMaximumBid(campaignName);
+const increaseBid = (bid, percentage, campaignName, bonusFactor = 1) => {
+  let maximumBid = getMaximumBid(campaignName) * bonusFactor;
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
@@ -1506,7 +1511,12 @@ const handlePerformers = (data, products) => {
       // up bid if under acos
 
       if (!k.bid || k.bid < getMaximumBid(k.campaignNameInfo)) {
-        k.bid = increaseBid(k.bid, percentageChange, k.campaignNameInfo);
+        k.bid = increaseBid(
+          k.bid,
+          percentageChange,
+          k.campaignNameInfo,
+          goodAcosBonusFactor
+        );
 
         console.log(
           `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
@@ -1900,9 +1910,11 @@ const resetBids = (data, match) => {
 //----- reset auto bids to new max
 
 const resetMaxBids = (data) => {
-  // find auto targets over currenet auto max bid
+  // find targets with less than 2 orders over current max bid
 
-  const targets = data.filter(
+  const minAcosOrders = 2;
+
+  const autoTargets = data.filter(
     (c) =>
       /auto$/i.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
@@ -1911,17 +1923,50 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "loose-match" ||
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
-      c.bid > maximumAutoBid
+      c.bid > maximumAutoBid &&
+      c.orders < minAcosOrders
   );
 
-  targets.forEach((k) => {
+  autoTargets.forEach((k) => {
     k.bid = maximumAutoBid;
     k.operation = "update";
-
-    // console.log(`Over max bid - ${k.campaignNameInfo}, new bid ${k.bid}`);
   });
 
-  outputRecords(targets);
+  // test campaigns
+
+  const testTargets = data.filter(
+    (c) =>
+      /test$/i.test(c.campaignNameInfo) &&
+      c.state === "enabled" &&
+      c.entity === "Keyword" &&
+      c.bid > maximumTestBid &&
+      c.orders < minAcosOrders
+  );
+
+  testTargets.forEach((k) => {
+    k.bid = maximumTestBid;
+    k.operation = "update";
+  });
+
+  // perf campaigns
+
+  const perfTargets = data.filter(
+    (c) =>
+      /perf$/i.test(c.campaignNameInfo) &&
+      c.state === "enabled" &&
+      c.entity === "Keyword" &&
+      c.bid > maximumPerfBid &&
+      c.orders < minAcosOrders
+  );
+
+  perfTargets.forEach((k) => {
+    k.bid = maximumPerfBid;
+    k.operation = "update";
+  });
+
+  outputRecords(autoTargets);
+  outputRecords(testTargets);
+  outputRecords(perfTargets);
 };
 
 //----- add negative exact to matching campaigns
