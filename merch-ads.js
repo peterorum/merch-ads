@@ -23,7 +23,7 @@ const maximumPerfBid = 0.5;
 const maximumProdBid = 0.55;
 
 // increase of max bid
-const goodAcosBonusFactor = 1.33;
+const goodAcosBonusFactor = 1.5;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -1320,7 +1320,7 @@ function getMaximumBid(campaignName) {
 // up the bid by a percentage
 
 const increaseBid = (bid, percentage, campaignName, bonusFactor = 1) => {
-  let maximumBid = getMaximumBid(campaignName) * bonusFactor;
+  let maximumBid = Math.round(getMaximumBid(campaignName) * bonusFactor * 100) / 100;
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
@@ -1510,7 +1510,7 @@ const handlePerformers = (data, products) => {
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      if (!k.bid || k.bid < getMaximumBid(k.campaignNameInfo)) {
+      if (!k.bid || k.bid < getMaximumBid(k.campaignNameInfo) * goodAcosBonusFactor ) {
         k.bid = increaseBid(
           k.bid,
           percentageChange,
@@ -1900,6 +1900,7 @@ const resetBids = (data, match) => {
   );
 
   targets.forEach((k) => {
+    console.log(`${k.campaignNameInfo}\t${k.adGroupNameInfo}`);
     k.bid = minimumBid;
     k.operation = "update";
   });
