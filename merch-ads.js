@@ -210,6 +210,7 @@ const loadData = () => {
       orders: d.orders ? parseFloat(d.orders) : d.orders,
       spend: d.spend ? parseFloat(d.spend) : d.spend,
       sales: d.sales ? parseFloat(d.sales) : d.sales,
+      cpc: d.cpc ? parseFloat(d.cpc) : d.cpc,
       acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
       adGroupDefaultBidInfo: d.adGroupDefaultBidInfo
         ? parseFloat(d.adGroupDefaultBidInfo)
@@ -1320,7 +1321,8 @@ function getMaximumBid(campaignName) {
 // up the bid by a percentage
 
 const increaseBid = (bid, percentage, campaignName, bonusFactor = 1) => {
-  let maximumBid = Math.round(getMaximumBid(campaignName) * bonusFactor * 100) / 100;
+  let maximumBid =
+    Math.round(getMaximumBid(campaignName) * bonusFactor * 100) / 100;
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
@@ -1416,6 +1418,12 @@ const raiseBidsOnLowImpressions = (data) => {
       percentageIncrease,
       k.campaignNameInfo
     );
+
+    // keep to cpc plus a cent
+    if (k.cpc > 0) {
+      k.bid = Math.min(k.bid, k.cpc + 0.01)
+    }
+
     k.operation = "update";
   });
 
@@ -1510,13 +1518,21 @@ const handlePerformers = (data, products) => {
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      if (!k.bid || k.bid < getMaximumBid(k.campaignNameInfo) * goodAcosBonusFactor ) {
+      if (
+        !k.bid ||
+        k.bid < getMaximumBid(k.campaignNameInfo) * goodAcosBonusFactor
+      ) {
         k.bid = increaseBid(
           k.bid,
           percentageChange,
           k.campaignNameInfo,
           goodAcosBonusFactor
         );
+
+        // keep to cpc plus a cent
+        if (k.cpc > 0) {
+          k.bid = Math.min(k.bid, k.cpc + 0.01)
+        }
 
         console.log(
           `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
@@ -1965,9 +1981,25 @@ const resetMaxBids = (data) => {
     k.operation = "update";
   });
 
+  const prodTargets = data.filter(
+    (c) =>
+      /auto$/i.test(c.campaignNameInfo) &&
+      c.state === "enabled" &&
+      c.entity === "Product Targeting" &&
+      c.productTargetingExpression.startsWith('"asin="') &&
+      c.bid > maximumProdBid &&
+      c.orders < minAcosOrders
+  );
+
+  prodTargets.forEach((k) => {
+    k.bid = maximumProdBid;
+    k.operation = "update";
+  });
+
   outputRecords(autoTargets);
   outputRecords(testTargets);
   outputRecords(perfTargets);
+  outputRecords(prodTargets);
 };
 
 //----- add negative exact to matching campaigns
@@ -2050,7 +2082,7 @@ const main = () => {
 
   const { data, headings } = loadData();
 
-  if (!/--(reset|purge)/.test(argv[2])) {
+  if (!/--(purge)/.test(argv[2])) {
     outputRecord(headings);
   }
 
