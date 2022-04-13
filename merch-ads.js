@@ -17,8 +17,8 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.35;
-const maximumTestBid = 0.45;
+const maximumAutoBid = 0.34;
+const maximumTestBid = 0.44;
 const maximumPerfBid = 0.5;
 const maximumProdBid = 0.55;
 
@@ -671,6 +671,61 @@ const createNewProductCampaign = ({
   return newCampaign;
 };
 
+//--------- create a new  adgroup in an existing test or perf campaign
+
+const createNewKeywordAdGroup = ({
+  campaignName,
+  autoCampaign,
+  adGroupName,
+  adGroupId,
+  matchType,
+  asin,
+  customerSearchTerm,
+  bid,
+  autoAdGroup,
+}) => {
+  // add adgroup
+
+  const newAdGroupRecords = [];
+
+  newAdGroupRecords.push({
+    ...blank,
+    operation: "create",
+    entity: "Ad Group",
+    campaignId: campaignName,
+    adGroupId,
+    adGroupName,
+    adGroupDefaultBid: bid,
+    state: "enabled",
+  });
+
+  // add ad
+  newAdGroupRecords.push({
+    ...blank,
+    entity: "Product Ad",
+    operation: "create",
+    campaignId: campaignName,
+    adGroupId,
+    asin,
+    state: "enabled",
+  });
+
+  // add keyword
+  newAdGroupRecords.push(
+    createNewKeywordRecords({
+      newCampaign: newAdGroupRecords,
+      campaignId: campaignName,
+      adGroupId,
+      customerSearchTerm,
+      matchType,
+      autoAdGroup,
+      bid,
+    })
+  );
+
+  return newAdGroupRecords;
+};
+
 //--------- create keyword test & performance campaigns from sales in auto
 
 // 1. Search for orders in Auto camaigns, on a keyword.
@@ -831,7 +886,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
             // find matching ad group name
             // or use Broad for legacy names
 
-            adGroupId = data.find(
+            const testAdGroup = data.find(
               (x) =>
                 x.entity === "Ad Group" &&
                 x.campaignId === existingTestCampaign.campaignId &&
@@ -839,20 +894,41 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
                   (x.adGroupNameInfo === "Broad" &&
                     /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
                 x.state === "enabled"
-            ).adGroupId;
+            );
+
+            if (testAdGroup) {
+              adGroupId = testAdGroup.adGroupId;
+
+              const newKeywordRecords = createNewKeywordRecords({
+                newCampaign: [],
+                campaignId,
+                adGroupId,
+                customerSearchTerm: co.customerSearchTerm,
+                matchType: "broad",
+                autoAdGroup,
+                bid: defaultTestBid,
+              });
+
+              newCampaigns = [...newCampaigns, ...newKeywordRecords];
+            } else {
+              // create new adGroup in existing campaign
+
+              const testAdGroupRecords = createNewKeywordAdGroup({
+                campaignName: existingTestCampaign.campaignNameInfo,
+                autoCampaign,
+                adGroupName,
+                adGroupId:
+                  existingTestCampaign.campaignNameInfo + " " + adGroupName,
+                asin,
+                customerSearchTerm: co.customerSearchTerm,
+                bid: defaultTestBid,
+                autoAdGroup,
+                matchType: "broad",
+              });
+
+              newCampaigns = [...newCampaigns, ...testAdGroupRecords];
+            }
           }
-
-          const newKeywordRecords = createNewKeywordRecords({
-            newCampaign: [],
-            campaignId,
-            adGroupId,
-            customerSearchTerm: co.customerSearchTerm,
-            matchType: "broad",
-            autoAdGroup,
-            bid: defaultTestBid,
-          });
-
-          newCampaigns = [...newCampaigns, ...newKeywordRecords];
         }
       }
 
@@ -925,35 +1001,49 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           if (existingPerfCampaign) {
             campaignId = existingPerfCampaign.campaignId;
 
-            try {
-              adGroupId = data.find(
-                (x) =>
-                  x.entity === "Ad Group" &&
-                  x.campaignId === existingPerfCampaign.campaignId &&
-                  (x.adGroupNameInfo === adGroupName ||
-                    (/^(Exact|K)$/i.test(x.adGroupNameInfo) &&
-                      /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
-                  x.state === "enabled"
-              ).adGroupId;
-            } catch (e) {
-              console.error(
-                `Adgroup not found: ${existingPerfCampaign.campaignNameInfo}, ${adGroupName}`
-              );
-              exit(1);
+            const perfAdGroup = data.find(
+              (x) =>
+                x.entity === "Ad Group" &&
+                x.campaignId === existingPerfCampaign.campaignId &&
+                (x.adGroupNameInfo === adGroupName ||
+                  (/^(Exact|K)$/i.test(x.adGroupNameInfo) &&
+                    /^(Auto)|(Ad Group)/i.test(adGroupName))) &&
+                x.state === "enabled"
+            );
+
+            if (perfAdGroup) {
+              adGroupId = perfAdGroup.adGroupId;
+
+              const newKeywordRecords = createNewKeywordRecords({
+                newCampaign: [],
+                campaignId,
+                adGroupId,
+                customerSearchTerm: co.customerSearchTerm,
+                matchType: "exact",
+                autoAdGroup,
+                bid: defaultPerfKeywordBid,
+              });
+
+              newCampaigns = [...newCampaigns, ...newKeywordRecords];
+            } else {
+              // create new adGroup in existing perf campaign
+
+              const perfAdGroupRecords = createNewKeywordCampaign({
+                campaignName: existingPerfCampaign.campaignNameInfo,
+                autoCampaign,
+                adGroupName,
+                adGroupId:
+                  existingPerfCampaign.campaignNameInfo + " " + adGroupName,
+                asin,
+                customerSearchTerm: co.customerSearchTerm,
+                bid: defaultPerfKeywordBid,
+                autoAdGroup,
+                matchType: "exact",
+              });
+
+              newCampaigns = [...newCampaigns, ...perfAdGroupRecords];
             }
           }
-
-          const newKeywordRecords = createNewKeywordRecords({
-            newCampaign: [],
-            campaignId,
-            adGroupId,
-            customerSearchTerm: co.customerSearchTerm,
-            matchType: "exact",
-            autoAdGroup,
-            bid: defaultPerfKeywordBid,
-          });
-
-          newCampaigns = [...newCampaigns, ...newKeywordRecords];
         }
       }
     }
@@ -1421,7 +1511,7 @@ const raiseBidsOnLowImpressions = (data) => {
 
     // keep to cpc plus a cent
     if (k.cpc > 0) {
-      k.bid = Math.min(k.bid, k.cpc + 0.01)
+      k.bid = Math.min(k.bid, k.cpc + 0.01);
     }
 
     k.operation = "update";
@@ -1531,7 +1621,7 @@ const handlePerformers = (data, products) => {
 
         // keep to cpc plus a cent
         if (k.cpc > 0) {
-          k.bid = Math.min(k.bid, k.cpc + 0.01)
+          k.bid = Math.min(k.bid, k.cpc + 0.01);
         }
 
         console.log(
