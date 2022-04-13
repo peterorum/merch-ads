@@ -674,7 +674,7 @@ const createNewProductCampaign = ({
 //--------- create a new  adgroup in an existing test or perf campaign
 
 const createNewKeywordAdGroup = ({
-  campaignName,
+  campaignId,
   autoCampaign,
   adGroupName,
   adGroupId,
@@ -692,7 +692,7 @@ const createNewKeywordAdGroup = ({
     ...blank,
     operation: "create",
     entity: "Ad Group",
-    campaignId: campaignName,
+    campaignId,
     adGroupId,
     adGroupName,
     adGroupDefaultBid: bid,
@@ -704,24 +704,24 @@ const createNewKeywordAdGroup = ({
     ...blank,
     entity: "Product Ad",
     operation: "create",
-    campaignId: campaignName,
+    campaignId,
     adGroupId,
     asin,
     state: "enabled",
   });
 
   // add keyword
-  newAdGroupRecords.push(
-    createNewKeywordRecords({
-      newCampaign: newAdGroupRecords,
-      campaignId: campaignName,
-      adGroupId,
-      customerSearchTerm,
-      matchType,
-      autoAdGroup,
-      bid,
-    })
-  );
+  const keywordRecords = createNewKeywordRecords({
+    newCampaign: [],
+    campaignId,
+    adGroupId,
+    customerSearchTerm,
+    matchType,
+    autoAdGroup,
+    bid,
+  });
+
+  newAdGroupRecords.push(...keywordRecords);
 
   return newAdGroupRecords;
 };
@@ -914,7 +914,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
               // create new adGroup in existing campaign
 
               const testAdGroupRecords = createNewKeywordAdGroup({
-                campaignName: existingTestCampaign.campaignNameInfo,
+                campaignId: existingTestCampaign.campaignId,
                 autoCampaign,
                 adGroupName,
                 adGroupId:
@@ -926,7 +926,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
                 matchType: "broad",
               });
 
-              newCampaigns = [...newCampaigns, ...testAdGroupRecords];
+              newCampaigns  = [...newCampaigns, ...testAdGroupRecords]
             }
           }
         }
@@ -1028,8 +1028,8 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
             } else {
               // create new adGroup in existing perf campaign
 
-              const perfAdGroupRecords = createNewKeywordCampaign({
-                campaignName: existingPerfCampaign.campaignNameInfo,
+              const perfAdGroupRecords = createNewKeywordAdGroup({
+                campaignId: existingPerfCampaign.campaignId,
                 autoCampaign,
                 adGroupName,
                 adGroupId:
