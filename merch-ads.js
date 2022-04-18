@@ -19,7 +19,7 @@ const minimumBid = 0.02;
 
 const maximumAutoBid = 0.34;
 const maximumTestBid = 0.44;
-const maximumPerfBid = 0.5;
+const maximumPerfBid = 0.49;
 const maximumProdBid = 0.55;
 
 // increase of max bid
