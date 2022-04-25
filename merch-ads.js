@@ -17,9 +17,9 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.34;
-const maximumTestBid = 0.44;
-const maximumPerfBid = 0.49;
+const maximumAutoBid = 0.33;
+const maximumTestBid = 0.43;
+const maximumPerfBid = 0.48;
 const maximumProdBid = 0.55;
 
 // increase of max bid
@@ -797,7 +797,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 
       let asin = data.find(
         (c) =>
-          c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
+          c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
       ).asin;
 
       if (!asin) {
@@ -1176,7 +1176,7 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
 
         let asin = data.find(
           (c) =>
-            c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
+            c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
         ).asin;
 
         if (!asin) {
@@ -1278,7 +1278,7 @@ const createProductPromotionCampaigns = (data, sales) => {
     // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
 
     let asin = data.find(
-      (c) => c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad"
+      (c) => c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
     ).asin;
 
     if (!asin) {
@@ -1635,7 +1635,7 @@ const handlePerformers = (data, products) => {
         k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
         let asin = data.find(
-          (c) => c.campaignId === k.campaignId && c.entity === "Product Ad"
+          (c) => c.campaignId === k.campaignId && c.entity === "Product Ad" && c.state === "enabled"
         ).asin;
 
         const price = products.find((p) => p.asin === asin).price;
@@ -1755,7 +1755,7 @@ const listPurgeable = (data, products) => {
     const baseCampaignName = ac.campaignName.replace(/ Auto$/, "");
 
     let asin = data.find(
-      (c) => c.campaignId === ac.campaignId && c.entity === "Product Ad"
+      (c) => c.campaignId === ac.campaignId && c.entity === "Product Ad" && c.state === "enabled"
     ).asin;
 
     const product = products.find((p) => p.asin === asin);
