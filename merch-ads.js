@@ -18,8 +18,8 @@ const { ca } = require("date-fns/locale");
 const minimumBid = 0.02;
 
 const maximumAutoBid = 0.33;
-const maximumTestBid = 0.43;
-const maximumPerfBid = 0.48;
+const maximumTestBid = 0.42;
+const maximumPerfBid = 0.47;
 const maximumProdBid = 0.55;
 
 // increase of max bid
@@ -1858,10 +1858,15 @@ const listNoProducts = (data, products) => {
       d.state === "enabled"
   );
 
-  autoCampaigns.forEach((c) => {
+  const autoAdGroups = data.filter(d =>
+    d.entity == 'Ad Group' &&
+    autoCampaigns.find(ac => ac.campaignNameInfo === d.campaignNameInfo) &&
+    d.state === "enabled");
+
+  autoAdGroups.forEach((c) => {
     const asin = data.find(
       (d) =>
-        d.campaignId === c.campaignId &&
+        d.campaignNameInfo === c.campaignNameInfo &&
         d.entity === "Product Ad" &&
         d.state === "enabled"
     ).asin;
@@ -1870,7 +1875,8 @@ const listNoProducts = (data, products) => {
       noProducts = [
         ...noProducts,
         {
-          campaign: c.campaignName,
+          campaign: c.campaignNameInfo,
+          adGroup: c.adGroupNameInfo,
           asin,
         },
       ];
@@ -1878,7 +1884,7 @@ const listNoProducts = (data, products) => {
   });
 
   noProducts.forEach((x) => {
-    console.log(`Campaign without live product: ${x.campaign}\t${x.asin}`);
+    console.log(`AdGroup without live product: ${x.campaign}/${x.adGroup}\t${x.asin}`);
   });
 };
 
