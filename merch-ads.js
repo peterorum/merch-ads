@@ -17,10 +17,10 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.33;
-const maximumTestBid = 0.42;
-const maximumPerfBid = 0.47;
-const maximumProdBid = 0.55;
+const maximumAutoBid = 0.32;
+const maximumTestBid = 0.41;
+const maximumPerfBid = 0.46;
+const maximumProdBid = 0.54;
 
 // increase of max bid
 const goodAcosBonusFactor = 1.5;
