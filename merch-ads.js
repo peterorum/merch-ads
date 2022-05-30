@@ -20,10 +20,10 @@ const minimumBid = 0.02;
 const maximumAutoBid = 0.30;
 const maximumTestBid = 0.40;
 const maximumPerfBid = 0.45;
-const maximumProdBid = 0.50;
+const maximumProdBid = 0.45;
 
 // increase of max bid
-const goodAcosBonusFactor = 1.3;
+const goodAcosBonusFactor = 1.2;
 
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
@@ -113,14 +113,20 @@ const loadData = () => {
         productTargetingId,
         campaignName,
         adGroupName,
+        campaignNameInfo,
+        adGroupNameInfo,
+        portfolioNameInfo,
         startDate,
         endDate,
         targetingType,
         state,
+        campaignStateInfo,
+        adGroupStateInfo,
         dailyBudget,
         sku,
         asin,
         adGroupDefaultBid,
+        adGroupDefaultBidInfo,
         bid,
         keywordText,
         matchType,
@@ -128,6 +134,7 @@ const loadData = () => {
         placement,
         percentage,
         productTargetingExpression,
+        resolvedProductTargetingExpressionInfo,
         impressions,
         clicks,
         clickThroughRate,
@@ -139,12 +146,6 @@ const loadData = () => {
         acos,
         cpc,
         roas,
-        campaignNameInfo,
-        adGroupNameInfo,
-        campaignStateInfo,
-        adGroupStateInfo,
-        adGroupDefaultBidInfo,
-        resolvedProductTargetingExpressionInfo,
       ] = d;
 
       return {
@@ -154,6 +155,7 @@ const loadData = () => {
         campaignId,
         adGroupId,
         portfolioId,
+        portfolioNameInfo,
         adId,
         keywordId,
         productTargetingId,
@@ -793,16 +795,21 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           x.state === "enabled"
       );
 
+      if (!autoAdGroup) {
+        console.log('Ad Group not found - check bulk sheet');
+        console.log(autoCampaign.campaignName);
+        console.log(adGroupName);
+        exit(1)
+      }
+
       // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
 
-      let asin = data.find(
+      const productAd = data.find(
         (c) =>
           c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
-      ).asin;
+      );
 
-      if (!asin) {
-        asin = missingAsins[co.campaignName];
-      }
+      const asin = productAd ? productAd.asin : asin = missingAsins[co.campaignName];
 
       if (!asin) {
         // asin missing from Ad in bulk download for unknown reason
