@@ -20,7 +20,7 @@ const minimumBid = 0.02;
 const maximumAutoBid = 0.30;
 const maximumTestBid = 0.40;
 const maximumPerfBid = 0.45;
-const maximumProdBid = 0.45;
+const maximumProdBid = 0.40;
 
 // increase of max bid
 const goodAcosBonusFactor = 1.2;
@@ -1642,7 +1642,7 @@ const handlePerformers = (data, products) => {
         k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
         let asin = data.find(
-          (c) => c.campaignId === k.campaignId && c.entity === "Product Ad" && c.state === "enabled"
+          (c) => c.campaignId === k.campaignId && c.entity === "Product Ad" && c.state === "enabled" && c.orders > 0
         ).asin;
 
         const price = products.find((p) => p.asin === asin).price;
@@ -1705,7 +1705,7 @@ const handleLowCtr = (data) => {
 // lower bids on high spenders withot sales
 
 const handleHighSpend = (data) => {
-  const maxSpend = 5;
+  const maxSpend = 4;
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
