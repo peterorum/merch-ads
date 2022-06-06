@@ -17,10 +17,10 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.30;
-const maximumTestBid = 0.40;
+const maximumAutoBid = 0.3;
+const maximumTestBid = 0.4;
 const maximumPerfBid = 0.45;
-const maximumProdBid = 0.40;
+const maximumProdBid = 0.4;
 
 // increase of max bid
 const goodAcosBonusFactor = 1.2;
@@ -796,20 +796,24 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
       );
 
       if (!autoAdGroup) {
-        console.log('Ad Group not found - check bulk sheet');
+        console.log("Ad Group not found - check bulk sheet");
         console.log(autoCampaign.campaignName);
         console.log(adGroupName);
-        exit(1)
+        exit(1);
       }
 
       // sales only says what ad group got the order, so need to find the ad group on the autocampaign & grab its asin
 
       const productAd = data.find(
         (c) =>
-          c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
+          c.adGroupId === autoAdGroup.adGroupId &&
+          c.entity === "Product Ad" &&
+          c.state === "enabled"
       );
 
-      const asin = productAd ? productAd.asin : asin = missingAsins[co.campaignName];
+      const asin = productAd
+        ? productAd.asin
+        : (asin = missingAsins[co.campaignName]);
 
       if (!asin) {
         // asin missing from Ad in bulk download for unknown reason
@@ -933,7 +937,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
                 matchType: "broad",
               });
 
-              newCampaigns  = [...newCampaigns, ...testAdGroupRecords]
+              newCampaigns = [...newCampaigns, ...testAdGroupRecords];
             }
           }
         }
@@ -1183,7 +1187,9 @@ const createTestKeywordPromotionCampaigns = (data, sales) => {
 
         let asin = data.find(
           (c) =>
-            c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
+            c.adGroupId === autoAdGroup.adGroupId &&
+            c.entity === "Product Ad" &&
+            c.state === "enabled"
         ).asin;
 
         if (!asin) {
@@ -1285,7 +1291,10 @@ const createProductPromotionCampaigns = (data, sales) => {
     // sales only says what ad group got the order, so need to find the ad on the autocampaign & grab its asin
 
     let asin = data.find(
-      (c) => c.adGroupId === autoAdGroup.adGroupId && c.entity === "Product Ad" && c.state === "enabled"
+      (c) =>
+        c.adGroupId === autoAdGroup.adGroupId &&
+        c.entity === "Product Ad" &&
+        c.state === "enabled"
     ).asin;
 
     if (!asin) {
@@ -1415,15 +1424,19 @@ function getMaximumBid(campaignName) {
   return maximumBid;
 }
 
-// up the bid by a percentage
+// up the bid by a percentage, limited to cpc + 0.01
 
-const increaseBid = (bid, percentage, campaignName, bonusFactor = 1) => {
+const increaseBid = (bid, percentage, campaignName, cpc, bonusFactor = 1) => {
   let maximumBid =
     Math.round(getMaximumBid(campaignName) * bonusFactor * 100) / 100;
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
-  const newBid = Math.ceil(bid1 + (bid1 * percentage) / 100);
+  let newBid = Math.ceil(bid1 + (bid1 * percentage) / 100);
+
+  if (!!cpc) {
+    newBid = Math.min(newBid, cpc + 0.01)
+  }
 
   return Math.max(Math.min(newBid / 100, maximumBid), minimumBid);
 };
@@ -1513,13 +1526,9 @@ const raiseBidsOnLowImpressions = (data) => {
     k.bid = increaseBid(
       k.bid || k.adGroupDefaultBidInfo,
       percentageIncrease,
-      k.campaignNameInfo
+      k.campaignNameInfo,
+      k.cpc
     );
-
-    // keep to cpc plus a cent
-    if (k.cpc > 0) {
-      k.bid = Math.min(k.bid, k.cpc + 0.01);
-    }
 
     k.operation = "update";
   });
@@ -1623,13 +1632,9 @@ const handlePerformers = (data, products) => {
           k.bid,
           percentageChange,
           k.campaignNameInfo,
+          k.cpc,
           goodAcosBonusFactor
         );
-
-        // keep to cpc plus a cent
-        if (k.cpc > 0) {
-          k.bid = Math.min(k.bid, k.cpc + 0.01);
-        }
 
         console.log(
           `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
@@ -1642,7 +1647,11 @@ const handlePerformers = (data, products) => {
         k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo);
 
         let asin = data.find(
-          (c) => c.campaignId === k.campaignId && c.entity === "Product Ad" && c.state === "enabled" && c.orders > 0
+          (c) =>
+            c.campaignId === k.campaignId &&
+            c.entity === "Product Ad" &&
+            c.state === "enabled" &&
+            c.orders > 0
         ).asin;
 
         const price = products.find((p) => p.asin === asin).price;
@@ -1762,7 +1771,10 @@ const listPurgeable = (data, products) => {
     const baseCampaignName = ac.campaignName.replace(/ Auto$/, "");
 
     let asin = data.find(
-      (c) => c.campaignId === ac.campaignId && c.entity === "Product Ad" && c.state === "enabled"
+      (c) =>
+        c.campaignId === ac.campaignId &&
+        c.entity === "Product Ad" &&
+        c.state === "enabled"
     ).asin;
 
     const product = products.find((p) => p.asin === asin);
@@ -1865,10 +1877,12 @@ const listNoProducts = (data, products) => {
       d.state === "enabled"
   );
 
-  const autoAdGroups = data.filter(d =>
-    d.entity == 'Ad Group' &&
-    autoCampaigns.find(ac => ac.campaignNameInfo === d.campaignNameInfo) &&
-    d.state === "enabled");
+  const autoAdGroups = data.filter(
+    (d) =>
+      d.entity == "Ad Group" &&
+      autoCampaigns.find((ac) => ac.campaignNameInfo === d.campaignNameInfo) &&
+      d.state === "enabled"
+  );
 
   autoAdGroups.forEach((c) => {
     const asin = data.find(
@@ -1891,7 +1905,9 @@ const listNoProducts = (data, products) => {
   });
 
   noProducts.forEach((x) => {
-    console.log(`AdGroup without live product: ${x.campaign}/${x.adGroup}\t${x.asin}`);
+    console.log(
+      `AdGroup without live product: ${x.campaign}/${x.adGroup}\t${x.asin}`
+    );
   });
 };
 
@@ -2031,6 +2047,7 @@ const resetBids = (data, match) => {
 
 const resetMaxBids = (data) => {
   // find targets with less than 2 orders over current max bid
+  // restrict bid to lower of max bid or cpc + $0.01
 
   const minAcosOrders = 2;
 
@@ -2043,12 +2060,12 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "loose-match" ||
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
-      c.bid > maximumAutoBid &&
+      (c.bid > maximumAutoBid || !!c.cpc) &&
       c.orders < minAcosOrders
   );
 
   autoTargets.forEach((k) => {
-    k.bid = maximumAutoBid;
+    k.bid = k.cpc ? Math.min(k.cpc + 0.01, maximumAutoBid) : maximumAutoBid;
     k.operation = "update";
   });
 
@@ -2059,12 +2076,12 @@ const resetMaxBids = (data) => {
       /test$/i.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
       c.entity === "Keyword" &&
-      c.bid > maximumTestBid &&
+      (c.bid > maximumTestBid || !!c.cpc) &&
       c.orders < minAcosOrders
   );
 
   testTargets.forEach((k) => {
-    k.bid = maximumTestBid;
+    k.bid = k.cpc ? Math.min(k.cpc + 0.01, maximumTestBid) : maximumTestBid;
     k.operation = "update";
   });
 
@@ -2075,12 +2092,12 @@ const resetMaxBids = (data) => {
       /perf$/i.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
       c.entity === "Keyword" &&
-      c.bid > maximumPerfBid &&
+      (c.bid > maximumPerfBid || !!c.cpc) &&
       c.orders < minAcosOrders
   );
 
   perfTargets.forEach((k) => {
-    k.bid = maximumPerfBid;
+    k.bid = k.cpc ? Math.min(k.cpc + 0.01, maximumPerfBid) : maximumPerfBid;
     k.operation = "update";
   });
 
@@ -2090,12 +2107,12 @@ const resetMaxBids = (data) => {
       c.state === "enabled" &&
       c.entity === "Product Targeting" &&
       c.productTargetingExpression.startsWith('"asin="') &&
-      c.bid > maximumProdBid &&
+      (c.bid > maximumProdBid || !!c.cpc) &&
       c.orders < minAcosOrders
   );
 
   prodTargets.forEach((k) => {
-    k.bid = maximumProdBid;
+    k.bid = k.cpc ? Math.min(k.cpc + 0.01, maximumProdBid) : maximumProdBid;
     k.operation = "update";
   });
 
