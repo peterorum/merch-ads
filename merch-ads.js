@@ -17,7 +17,8 @@ const { ca } = require("date-fns/locale");
 // min & maximum allowable $bid
 const minimumBid = 0.02;
 
-const maximumAutoBid = 0.3;
+const maximumAutoMatchBid = 0.3;
+const maxAutoSubstituteComplementBid = 0.2;
 const maximumTestBid = 0.4;
 
 // increase of max bid
@@ -926,11 +927,19 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
   outputRecords(newCampaigns);
 };
 
-function getMaximumBid(campaignName) {
-  let maximumBid = maximumAutoBid;
+function getMaximumBid(campaign) {
+  let maximumBid = maximumAutoMatchBid;
 
-  if (/test$/i.test(campaignName)) {
+  if (/test$/i.test(campaign.campaignNameInfo)) {
+    // test
     maximumBid = maximumTestBid;
+  } else if (
+    // auto
+    campaign.entity === "Product Targeting" &&
+    (campaign.productTargetingExpression === "substitutes" ||
+      campaign.productTargetingExpression === "complements")
+  ) {
+    maximumBid = maxAutoSubstituteComplementBid;
   }
 
   return maximumBid;
@@ -938,32 +947,35 @@ function getMaximumBid(campaignName) {
 
 // up the bid by a percentage, limited to cpc + 0.01
 
-const increaseBid = (bid, percentage, campaignName, cpc, bonusFactor = 1) => {
+const increaseBid = (bid, percentage, campaign, bonusFactor = 1) => {
   let maximumBid =
-    Math.round(getMaximumBid(campaignName) * bonusFactor * 100) / 100;
+    Math.round(getMaximumBid(campaign) * bonusFactor * 100) / 100;
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
   let newBid = Math.ceil(bid1 + (bid1 * percentage) / 100) / 100;
 
-  if (!!cpc) {
-    newBid = Math.min(newBid, cpc + 0.01);
+  if (!!campaign.cpc) {
+    newBid = Math.min(newBid, campaign.cpc + 0.01);
   }
 
-  return Math.max(Math.min(newBid, maximumBid), minimumBid);
+  newBid = Math.max(Math.min(newBid, maximumBid), minimumBid);
+
+  return newBid;
+
 };
 
 // up the bid by a percentage
 
-const decreaseBid = (bid, percentage, campaignName, cpc) => {
-  let maximumBid = getMaximumBid(campaignName);
+const decreaseBid = (bid, percentage, campaign) => {
+  let maximumBid = getMaximumBid(campaign);
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
   let newBid = Math.floor(bid1 - (bid1 * percentage) / 100) / 100;
 
-  if (!!cpc) {
-    newBid = Math.min(newBid, cpc - 0.01);
+  if (!!campaign.cpc) {
+    newBid = Math.min(newBid, campaign.cpc - 0.01);
   }
 
   return Math.min(Math.max(newBid, minimumBid), maximumBid);
@@ -1024,7 +1036,7 @@ const raiseBidsOnLowImpressions = (data) => {
     (c) =>
       c.state === "enabled" &&
       c.impressions < fewImpressions &&
-      (!c.bid || c.bid < getMaximumBid(c.campaignNameInfo)) &&
+      (!c.bid || c.bid < getMaximumBid(c)) &&
       oldCampaigns.find((oc) => oc.campaignId === c.campaignId) &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
@@ -1041,11 +1053,17 @@ const raiseBidsOnLowImpressions = (data) => {
     k.bid = increaseBid(
       k.bid || k.adGroupDefaultBidInfo,
       percentageIncrease,
-      k.campaignNameInfo,
-      k.cpc
+      k
     );
 
     k.operation = "update";
+
+    // console.log(
+    //   `Increase bid for Low impressions - ${k.campaignNameInfo}, ${
+    //     k.productTargetingExpression || k.keywordText
+    //   }, new bid ${k.bid}`
+    // );
+
   });
 
   outputRecords(keywords);
@@ -1088,7 +1106,7 @@ const lowerBidsOnLowSales = (data) => {
   );
 
   keywords.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease, k.campaignNameInfo, k.cpc);
+    k.bid = decreaseBid(k.bid, percentageDecrease, k);
     k.operation = "update";
 
     if (k.keywordText) {
@@ -1139,13 +1157,12 @@ const handlePerformers = (data, products) => {
 
       if (
         !k.bid ||
-        k.bid < getMaximumBid(k.campaignNameInfo) * goodAcosBonusFactor
+        k.bid < getMaximumBid(k) * goodAcosBonusFactor
       ) {
         k.bid = increaseBid(
           k.bid,
           percentageChange,
-          k.campaignNameInfo,
-          k.cpc,
+          k,
           goodAcosBonusFactor
         );
 
@@ -1157,7 +1174,7 @@ const handlePerformers = (data, products) => {
       // decrease bid if over acos
 
       if (k.bid > minimumBid) {
-        k.bid = decreaseBid(k.bid, percentageChange, k.campaignNameInfo, k.cpc);
+        k.bid = decreaseBid(k.bid, percentageChange, k);
 
         let asin = data.find(
           (c) =>
@@ -1214,7 +1231,7 @@ const handleLowCtr = (data) => {
   );
 
   targets.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease, k.campaignNameInfo, k.cpc);
+    k.bid = decreaseBid(k.bid, percentageDecrease, k);
     k.operation = "update";
 
     console.log(`Low ctr - ${k.campaignNameInfo}, new bid ${k.bid}`);
@@ -1253,7 +1270,7 @@ const handleHighSpend = (data) => {
   );
 
   targets.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease, k.campaignNameInfo, k.cpc);
+    k.bid = decreaseBid(k.bid, percentageDecrease, k);
     console.log(`High spend - ${k.campaignNameInfo}, new bid ${k.bid}`);
     k.operation = "update";
   });
@@ -1570,12 +1587,12 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "loose-match" ||
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
-      (c.bid > maximumAutoBid || !!c.cpc) &&
+      (c.bid > getMaximumBid(c) || !!c.cpc) &&
       c.orders < minAcosOrders
   );
 
   autoTargets.forEach((k) => {
-    k.bid = k.cpc ? Math.min(k.cpc, maximumAutoBid) : maximumAutoBid;
+    k.bid = k.cpc ? Math.min(k.cpc, getMaximumBid(k)) : getMaximumBid(k);
     k.operation = "update";
   });
 
