@@ -1596,6 +1596,8 @@ const resetMaxBids = (data) => {
     k.operation = "update";
   });
 
+  outputRecords(autoTargets);
+
   // test campaigns
 
   const testTargets = data.filter(
@@ -1611,6 +1613,9 @@ const resetMaxBids = (data) => {
     k.bid = k.cpc ? Math.min(k.cpc, maximumTestBid) : maximumTestBid;
     k.operation = "update";
   });
+
+  outputRecords(testTargets);
+
 };
 
 //----- add specified negative exact to matching campaigns
