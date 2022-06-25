@@ -1596,8 +1596,6 @@ const resetMaxBids = (data) => {
     k.operation = "update";
   });
 
-  outputRecords(autoTargets);
-
   // test campaigns
 
   const testTargets = data.filter(
@@ -1614,6 +1612,7 @@ const resetMaxBids = (data) => {
     k.operation = "update";
   });
 
+  outputRecords(autoTargets);
   outputRecords(testTargets);
 
 };
