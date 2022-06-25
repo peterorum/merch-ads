@@ -1040,13 +1040,12 @@ const raiseBidsOnLowImpressions = (data) => {
       oldCampaigns.find((oc) => oc.campaignId === c.campaignId) &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
-        // auto or prod
+        // auto
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith('"asin="'))))
+            c.productTargetingExpression === "substitutes" )))
   );
 
   keywords.forEach((k) => {
@@ -1090,13 +1089,12 @@ const lowerBidsOnLowSales = (data) => {
       c.bid > minimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
-        // auto or prod
+        // auto
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith('"asin="')))) &&
+            c.productTargetingExpression === "substitutes" ))) &&
       // no sales
       ((c.orders === 0 && c.clicks >= zeroSalesManyClicks) ||
         // 1 sale & bad acos & more clicks
@@ -1139,17 +1137,17 @@ const handlePerformers = (data, products) => {
     (c) =>
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
-        // auto or prod
+        // auto
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith('"asin="')))) &&
+            c.productTargetingExpression === "substitutes"))) &&
       c.orders >= minOrders
   );
 
   targets.forEach((k) => {
+
     k.operation = "update";
 
     if (k.acos <= targetAcos) {
@@ -1219,13 +1217,12 @@ const handleLowCtr = (data) => {
       c.bid > minimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
-        // auto or prod
+        // auto
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith('"asin="')))) &&
+            c.productTargetingExpression === "substitutes" ))) &&
       c.impressions >= manyImpressions &&
       c.clicks / c.impressions < lowCtr
   );
@@ -1258,13 +1255,12 @@ const handleHighSpend = (data) => {
       c.bid > minimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
-        // auto or prod
+        // auto
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith('"asin="')))) &&
+            c.productTargetingExpression === "substitutes" ))) &&
       c.spend >= maxSpend &&
       c.orders === 0
   );
@@ -1552,13 +1548,12 @@ const resetBids = (data, match) => {
       c.state === "enabled" &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
-        // auto or prod
+        // auto
         (c.entity === "Product Targeting" &&
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ||
-            c.productTargetingExpression.startsWith('"asin="'))))
+            c.productTargetingExpression === "substitutes" )))
   );
 
   targets.forEach((k) => {
