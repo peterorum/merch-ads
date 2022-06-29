@@ -948,8 +948,7 @@ function getMaximumBid(campaign) {
 // up the bid by a percentage, limited to cpc + 0.01
 
 const increaseBid = (bid, percentage, campaign, bonusFactor = 1) => {
-  let maximumBid =
-    Math.round(getMaximumBid(campaign) * bonusFactor * 100) / 100;
+  let maximumBid = getMaximumBid(campaign);
 
   const bid1 = 100 * (bid || defaultAutoBid);
 
@@ -961,8 +960,9 @@ const increaseBid = (bid, percentage, campaign, bonusFactor = 1) => {
 
   newBid = Math.max(Math.min(newBid, maximumBid), minimumBid);
 
-  return newBid;
+  newBid = Math.round(newBid * bonusFactor * 100) / 100;
 
+  return newBid;
 };
 
 // up the bid by a percentage
@@ -1045,7 +1045,7 @@ const raiseBidsOnLowImpressions = (data) => {
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" )))
+            c.productTargetingExpression === "substitutes")))
   );
 
   keywords.forEach((k) => {
@@ -1062,7 +1062,6 @@ const raiseBidsOnLowImpressions = (data) => {
     //     k.productTargetingExpression || k.keywordText
     //   }, new bid ${k.bid}`
     // );
-
   });
 
   outputRecords(keywords);
@@ -1094,7 +1093,7 @@ const lowerBidsOnLowSales = (data) => {
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ))) &&
+            c.productTargetingExpression === "substitutes"))) &&
       // no sales
       ((c.orders === 0 && c.clicks >= zeroSalesManyClicks) ||
         // 1 sale & bad acos & more clicks
@@ -1147,22 +1146,16 @@ const handlePerformers = (data, products) => {
   );
 
   targets.forEach((k) => {
-
     k.operation = "update";
 
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      if (
-        !k.bid ||
-        k.bid < getMaximumBid(k) * goodAcosBonusFactor
-      ) {
-        k.bid = increaseBid(
-          k.bid,
-          percentageChange,
-          k,
-          goodAcosBonusFactor
-        );
+      if (!k.bid || k.bid < getMaximumBid(k) * goodAcosBonusFactor) {
+
+        const acosFactor = /test$/i.test(k.campaignNameInfo) ? goodAcosBonusFactor : 1;
+
+        k.bid = increaseBid(k.bid, percentageChange, k, acosFactor);
 
         console.log(
           `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
@@ -1222,7 +1215,7 @@ const handleLowCtr = (data) => {
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ))) &&
+            c.productTargetingExpression === "substitutes"))) &&
       c.impressions >= manyImpressions &&
       c.clicks / c.impressions < lowCtr
   );
@@ -1260,7 +1253,7 @@ const handleHighSpend = (data) => {
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" ))) &&
+            c.productTargetingExpression === "substitutes"))) &&
       c.spend >= maxSpend &&
       c.orders === 0
   );
@@ -1553,7 +1546,7 @@ const resetBids = (data, match) => {
           (c.productTargetingExpression === "close-match" ||
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
-            c.productTargetingExpression === "substitutes" )))
+            c.productTargetingExpression === "substitutes")))
   );
 
   targets.forEach((k) => {
@@ -1609,7 +1602,6 @@ const resetMaxBids = (data) => {
 
   outputRecords(autoTargets);
   outputRecords(testTargets);
-
 };
 
 //----- add specified negative exact to matching campaigns
