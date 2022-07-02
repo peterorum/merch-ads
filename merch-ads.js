@@ -15,21 +15,23 @@ const missingAsins = require("./data/missing-asins.json");
 const { ca } = require("date-fns/locale");
 
 // min & maximum allowable $bid
-const minimumBid = 0.02;
+const absoluteMinimumBid = 0.02;
+const absoluteMaximumBid = 1;
 
 const maximumAutoMatchBid = 0.3;
 const maxAutoSubstituteComplementBid = 0.2;
 const maximumTestBid = 0.4;
 
-// increase of max bid
-const goodAcosBonusFactor = 1.2;
-
 const defaultAutoBid = 0.2;
 const defaultTestBid = 0.4;
 
-const targetAcos = 25;
-
 const maxPrice = 18.99;
+
+// ACOS
+const targetAcos = 25;
+const minAcosOrders = 1;
+// bid increase
+const goodAcosBonusFactor = 1.1;
 
 // one update per keyword
 let keywordIdsUpdated = [];
@@ -958,14 +960,16 @@ const increaseBid = (bid, percentage, campaign, bonusFactor = 1) => {
     newBid = Math.min(newBid, campaign.cpc + 0.01);
   }
 
-  newBid = Math.max(Math.min(newBid, maximumBid), minimumBid);
+  newBid = Math.max(Math.min(newBid, maximumBid), absoluteMinimumBid);
 
   newBid = Math.round(newBid * bonusFactor * 100) / 100;
+
+  newBid = Math.min(newBid, absoluteMaximumBid)
 
   return newBid;
 };
 
-// up the bid by a percentage
+// reduce the bid by a percentage
 
 const decreaseBid = (bid, percentage, campaign) => {
   let maximumBid = getMaximumBid(campaign);
@@ -978,7 +982,7 @@ const decreaseBid = (bid, percentage, campaign) => {
     newBid = Math.min(newBid, campaign.cpc - 0.01);
   }
 
-  return Math.min(Math.max(newBid, minimumBid), maximumBid);
+  return Math.min(Math.max(newBid, absoluteMinimumBid), maximumBid);
 };
 
 // add general negatives to a campaign
@@ -1085,7 +1089,7 @@ const lowerBidsOnLowSales = (data) => {
   const keywords = data.filter(
     (c) =>
       c.state === "enabled" &&
-      c.bid > minimumBid &&
+      c.bid > absoluteMinimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
         // auto
@@ -1123,7 +1127,6 @@ const lowerBidsOnLowSales = (data) => {
 const handlePerformers = (data, products) => {
   // increase or decrease bids on sellers based on ACOS
 
-  const minOrders = 2;
   const percentageChange = 10;
 
   const allCampaigns = data.filter(
@@ -1142,7 +1145,7 @@ const handlePerformers = (data, products) => {
             c.productTargetingExpression === "loose-match" ||
             c.productTargetingExpression === "complements" ||
             c.productTargetingExpression === "substitutes"))) &&
-      c.orders >= minOrders
+      c.orders >= minAcosOrders
   );
 
   targets.forEach((k) => {
@@ -1164,7 +1167,7 @@ const handlePerformers = (data, products) => {
     } else {
       // decrease bid if over acos
 
-      if (k.bid > minimumBid) {
+      if (k.bid > absoluteMinimumBid) {
         k.bid = decreaseBid(k.bid, percentageChange, k);
 
         let asin = data.find(
@@ -1207,7 +1210,7 @@ const handleLowCtr = (data) => {
   const targets = data.filter(
     (c) =>
       c.state === "enabled" &&
-      c.bid > minimumBid &&
+      c.bid > absoluteMinimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
         // auto
@@ -1245,7 +1248,7 @@ const handleHighSpend = (data) => {
   const targets = data.filter(
     (c) =>
       c.state === "enabled" &&
-      c.bid > minimumBid &&
+      c.bid > absoluteMinimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
         // auto
@@ -1551,7 +1554,7 @@ const resetBids = (data, match) => {
 
   targets.forEach((k) => {
     console.log(`${k.campaignNameInfo}\t${k.adGroupNameInfo}`);
-    k.bid = minimumBid;
+    k.bid = absoluteMinimumBid;
     k.operation = "update";
   });
 
@@ -1563,8 +1566,6 @@ const resetBids = (data, match) => {
 const resetMaxBids = (data) => {
   // find targets with less than 2 orders over current max bid
   // restrict bid to lower of max bid or cpc
-
-  const minAcosOrders = 2;
 
   const autoTargets = data.filter(
     (c) =>
