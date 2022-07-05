@@ -960,11 +960,13 @@ const increaseBid = (bid, percentage, campaign, bonusFactor = 1) => {
     newBid = Math.min(newBid, campaign.cpc + 0.01);
   }
 
-  newBid = Math.max(Math.min(newBid, maximumBid), absoluteMinimumBid);
+  if (bonusFactor === 1) {
+    newBid = Math.min(newBid, maximumBid);
+  }
 
   newBid = Math.round(newBid * bonusFactor * 100) / 100;
 
-  newBid = Math.min(newBid, absoluteMaximumBid)
+  newBid = Math.min(newBid, absoluteMaximumBid);
 
   return newBid;
 };
@@ -1155,8 +1157,9 @@ const handlePerformers = (data, products) => {
       // up bid if under acos
 
       if (!k.bid || k.bid < getMaximumBid(k) * goodAcosBonusFactor) {
-
-        const acosFactor = /test$/i.test(k.campaignNameInfo) ? goodAcosBonusFactor : 1;
+        const acosFactor = /test$/i.test(k.campaignNameInfo)
+          ? goodAcosBonusFactor
+          : 1;
 
         k.bid = increaseBid(k.bid, percentageChange, k, acosFactor);
 
@@ -1712,7 +1715,7 @@ const main = () => {
     }
 
     case "--performers": {
-      handlePerformers(data);
+      handlePerformers(data, products);
 
       break;
     }
