@@ -1156,16 +1156,21 @@ const handlePerformers = (data, products) => {
     if (k.acos <= targetAcos) {
       // up bid if under acos
 
-      if (!k.bid || k.bid < getMaximumBid(k) * goodAcosBonusFactor) {
-        const acosFactor = /test$/i.test(k.campaignNameInfo)
-          ? goodAcosBonusFactor
-          : 1;
+      const acosFactor = /test$/i.test(k.campaignNameInfo)
+      ? goodAcosBonusFactor
+      : 1;
+
+      if (!k.bid || k.bid < Math.max(k.cpc, getMaximumBid(k)) * acosFactor) {
 
         k.bid = increaseBid(k.bid, percentageChange, k, acosFactor);
 
-        console.log(
-          `Under acos - ${k.campaignNameInfo}, ${k.acos}, new bid ${k.bid}`
-        );
+        if (/test$/i.test(k.campaignNameInfo)) {
+          console.log(
+            `Under acos - ${k.campaignNameInfo}, ${k.acos}, ${
+              k.keywordText || ""
+            }, new bid ${k.bid}`
+          );
+        }
       }
     } else {
       // decrease bid if over acos
