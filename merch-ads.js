@@ -1180,7 +1180,7 @@ const handlePerformers = (data, products) => {
 
         let asin = data.find(
           (c) =>
-            c.campaignId === k.campaignId &&
+            c.adGroupId === k.adGroupId &&
             c.entity === "Product Ad" &&
             c.state === "enabled" &&
             c.orders > 0
