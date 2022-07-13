@@ -1054,8 +1054,10 @@ const raiseBidsOnLowImpressions = (data) => {
             c.productTargetingExpression === "substitutes")))
   );
 
+  let updatedBids = [];
+
   keywords.forEach((k) => {
-    k.bid = increaseBid(
+    const newBid = increaseBid(
       k.bid || k.adGroupDefaultBidInfo,
       percentageIncrease,
       k
@@ -1063,14 +1065,20 @@ const raiseBidsOnLowImpressions = (data) => {
 
     k.operation = "update";
 
-    // console.log(
-    //   `Increase bid for Low impressions - ${k.campaignNameInfo}, ${
-    //     k.productTargetingExpression || k.keywordText
-    //   }, new bid ${k.bid}`
-    // );
+    if (newBid !== k.bid) {
+      k.bid = newBid;
+
+      updatedBids = [...updatedBids, k];
+
+      // console.log(
+      //   `Increase bid for Low impressions - ${k.campaignNameInfo}, ${
+      //     k.productTargetingExpression || k.keywordText
+      //   }, new bid ${k.bid}`
+      // );
+    }
   });
 
-  outputRecords(keywords);
+  outputRecords(updatedBids);
 };
 
 // raise bids on low impression targets
@@ -1108,20 +1116,28 @@ const lowerBidsOnLowSales = (data) => {
           c.acos > targetAcos))
   );
 
-  keywords.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease, k);
-    k.operation = "update";
+  let updatedBids = [];
 
-    if (k.keywordText) {
-      console.log(
-        `High clicks, low sales - ${k.campaignNameInfo}, ${
-          k.productTargetingExpression || k.keywordText
-        }, new bid ${k.bid}`
-      );
+  keywords.forEach((k) => {
+    const newBid = decreaseBid(k.bid, percentageDecrease, k);
+
+    if (newBid !== k.bid) {
+      k.bid = newBid;
+      k.operation = "update";
+
+      updatedBids = [...updatedBids, k];
+
+      if (k.keywordText) {
+        console.log(
+          `High clicks, low sales - ${k.campaignNameInfo}, ${
+            k.productTargetingExpression || k.keywordText
+          }, new bid ${k.bid}`
+        );
+      }
     }
   });
 
-  outputRecords(keywords);
+  outputRecords(updatedBids);
 };
 
 //----------- raise bids on low impression targets
@@ -1150,6 +1166,8 @@ const handlePerformers = (data, products) => {
       c.orders >= minAcosOrders
   );
 
+  let updatedBids = [];
+
   targets.forEach((k) => {
     k.operation = "update";
 
@@ -1157,47 +1175,58 @@ const handlePerformers = (data, products) => {
       // up bid if under acos
 
       const acosFactor = /test$/i.test(k.campaignNameInfo)
-      ? goodAcosBonusFactor
-      : 1;
+        ? goodAcosBonusFactor
+        : 1;
 
       if (!k.bid || k.bid < Math.max(k.cpc, getMaximumBid(k)) * acosFactor) {
+        const newBid = increaseBid(k.bid, percentageChange, k, acosFactor);
 
-        k.bid = increaseBid(k.bid, percentageChange, k, acosFactor);
+        if (newBid !== k.bid) {
+          k.bid = newBid;
 
-        if (/test$/i.test(k.campaignNameInfo)) {
-          console.log(
-            `Under acos - ${k.campaignNameInfo}, ${k.acos}, ${
-              k.keywordText || ""
-            }, new bid ${k.bid}`
-          );
+          updatedBids = [...updatedBids, k];
+
+          if (/test$/i.test(k.campaignNameInfo)) {
+            console.log(
+              `Under acos - ${k.campaignNameInfo}, ${k.acos}, ${
+                k.keywordText || ""
+              }, new bid ${k.bid}`
+            );
+          }
         }
       }
     } else {
       // decrease bid if over acos
 
       if (k.bid > absoluteMinimumBid) {
-        k.bid = decreaseBid(k.bid, percentageChange, k);
+        const newBid = decreaseBid(k.bid, percentageChange, k);
 
-        let asin = data.find(
-          (c) =>
-            c.adGroupId === k.adGroupId &&
-            c.entity === "Product Ad" &&
-            c.state === "enabled" &&
-            c.orders > 0
-        ).asin;
+        if (newBid !== k.bid) {
+          k.bid = newBid;
 
-        const price = products.find((p) => p.asin === asin).price;
+          updatedBids = [...updatedBids, k];
 
-        const msg = price < maxPrice ? "*** Over acos" : "Over acos";
+          let asin = data.find(
+            (c) =>
+              c.adGroupId === k.adGroupId &&
+              c.entity === "Product Ad" &&
+              c.state === "enabled" &&
+              c.orders > 0
+          ).asin;
 
-        console.log(
-          `${msg} - ${k.campaignNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
-        );
+          const price = products.find((p) => p.asin === asin).price;
+
+          const msg = price < maxPrice ? "*** Over acos" : "Over acos";
+
+          console.log(
+            `${msg} - ${k.campaignNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
+          );
+        }
       }
     }
   });
 
-  outputRecords(targets);
+  outputRecords(updatedBids);
 };
 
 //---------- lower bids on low ctr
@@ -1231,14 +1260,22 @@ const handleLowCtr = (data) => {
       c.clicks / c.impressions < lowCtr
   );
 
-  targets.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease, k);
-    k.operation = "update";
+  let updatedBids = [];
 
-    console.log(`Low ctr - ${k.campaignNameInfo}, new bid ${k.bid}`);
+  targets.forEach((k) => {
+    const newBid = decreaseBid(k.bid, percentageDecrease, k);
+
+    if (newBid !== k.bid) {
+      k.bid = newBid;
+      k.operation = "update";
+
+      updatedBids = [...updatedBids, k];
+
+      console.log(`Low ctr - ${k.campaignNameInfo}, new bid ${k.bid}`);
+    }
   });
 
-  outputRecords(targets);
+  outputRecords(updatedBids);
 };
 
 // lower bids on high spenders withot sales
@@ -1252,6 +1289,8 @@ const handleHighSpend = (data) => {
   );
 
   // find targets with high spend
+
+  let updatedBids = [];
 
   const targets = data.filter(
     (c) =>
@@ -1270,12 +1309,18 @@ const handleHighSpend = (data) => {
   );
 
   targets.forEach((k) => {
-    k.bid = decreaseBid(k.bid, percentageDecrease, k);
-    console.log(`High spend - ${k.campaignNameInfo}, new bid ${k.bid}`);
-    k.operation = "update";
+    const newBid = decreaseBid(k.bid, percentageDecrease, k);
+
+    if (newBid !== k.bid) {
+      k.bid = newBid;
+      updatedBids = [...updatedBids, k];
+
+      console.log(`High spend - ${k.campaignNameInfo}, new bid ${k.bid}`);
+      k.operation = "update";
+    }
   });
 
-  outputRecords(targets);
+  outputRecords(updatedBids);
 };
 
 //--- list unsold with high spend or impressions
@@ -1575,6 +1620,8 @@ const resetMaxBids = (data) => {
   // find targets with less than 2 orders over current max bid
   // restrict bid to lower of max bid or cpc
 
+  let updatedBids = [];
+
   const autoTargets = data.filter(
     (c) =>
       /auto$/i.test(c.campaignNameInfo) &&
@@ -1589,8 +1636,14 @@ const resetMaxBids = (data) => {
   );
 
   autoTargets.forEach((k) => {
-    k.bid = k.cpc ? Math.min(k.cpc, getMaximumBid(k)) : getMaximumBid(k);
-    k.operation = "update";
+    const newBid = k.cpc ? Math.min(k.cpc, getMaximumBid(k)) : getMaximumBid(k);
+
+    if (newBid !== k.bid) {
+      k.bid = newBid;
+      k.operation = "update";
+
+      updatedBids = [...updatedBids, k];
+    }
   });
 
   // test campaigns
@@ -1605,12 +1658,18 @@ const resetMaxBids = (data) => {
   );
 
   testTargets.forEach((k) => {
-    k.bid = k.cpc ? Math.min(k.cpc, maximumTestBid) : maximumTestBid;
-    k.operation = "update";
+    const newBid = k.cpc ? Math.min(k.cpc, maximumTestBid) : maximumTestBid;
+
+    if (newBid !== k.bid) {
+      k.bid = newBid;
+
+      k.operation = "update";
+
+      updatedBids = [...updatedBids, k];
+    }
   });
 
-  outputRecords(autoTargets);
-  outputRecords(testTargets);
+  outputRecords(updatedBids);
 };
 
 //----- add specified negative exact to matching campaigns
