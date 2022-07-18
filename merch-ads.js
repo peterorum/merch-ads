@@ -1219,7 +1219,7 @@ const handlePerformers = (data, products) => {
           const msg = price < maxPrice ? "*** Over acos" : "Over acos";
 
           console.log(
-            `${msg} - ${k.campaignNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
+            `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
           );
         }
       }
