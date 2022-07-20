@@ -1676,7 +1676,7 @@ const resetMaxBids = (data) => {
 
 const addNegative = (data, match, term) => {
   if (!match || !term) {
-    console.error("Missing campaign match & exact text");
+    console.error("Missing campaign match & text");
     exit(1);
   }
 
@@ -1700,6 +1700,8 @@ const addNegative = (data, match, term) => {
       operation: "create",
       campaignId: c.campaignId,
       keywordText: term,
+      // comment out as required
+      // matchType: "negativePhrase",
       matchType: "negativeExact",
       state: "enabled",
     };
@@ -1865,7 +1867,7 @@ const main = () => {
         '--reset "^(halloween|xmas)"\t\tSet to min bid on campaign match'
       );
       console.log(
-        '--negative "^pizza" "funny shirt"\t\tAdd negative exact to auto campaigns'
+        '--negative "^pizza" "funny shirt"\t\tAdd negative phrase to auto campaigns'
       );
       console.log("--purge\t\tOutput unsold for purging");
       console.log("--designs\t\tList designs without US t-shirts");
