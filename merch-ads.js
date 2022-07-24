@@ -18,8 +18,8 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoMatchBid = 0.3;
-const maxAutoSubstituteComplementBid = 0.2;
+const maximumAutoMatchBid = 0.33;
+const maxAutoSubstituteComplementBid = 0.22;
 const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.2;
@@ -1579,6 +1579,63 @@ const calcTargetStats = (data) => {
   });
 };
 
+//--- calc stats on campaign types, auto & test
+
+const calcCampaignStats = (data) => {
+  const allCampaigns = data.filter(
+    (d) => d.entity === "Campaign" && d.state === "enabled"
+  );
+
+  const stats = {};
+
+  const targets = data.forEach((c) => {
+    if (
+      c.state === "enabled" &&
+      /(auto|test)$/i.test(c.campaignNameInfo)
+    ) {
+
+      const campaignType = /auto$/i.test(c.campaignNameInfo) ? 'auto' : 'test';
+
+      let stat = stats[campaignType];
+
+      if (!stat) {
+        stat = {
+          impressions: 0,
+          clicks: 0,
+          orders: 0,
+          sales: 0,
+          spend: 0,
+        };
+      }
+      stat.impressions += c.impressions;
+      stat.clicks += c.clicks;
+      stat.orders += c.orders;
+      stat.sales += c.sales;
+      stat.spend += c.spend;
+
+      stats[campaignType] = stat;
+    }
+  });
+
+  console.log(
+    "Type\timpr'ns\tclicks\tctr\tcpc\torders\tspend\tsales\t\tACOS"
+  );
+
+  Object.keys(stats).forEach((k) => {
+    const s = stats[k];
+
+    console.log(
+      `${k}\t${s.impressions}\t${s.clicks}\t${format2dp(
+        (s.clicks / s.impressions) * 100
+      )}%\t$${format2dp(s.spend / s.clicks)}\t${s.orders}\t$${format2dp(
+        s.spend
+      )}\t$${format2dp(s.sales)}\t${
+        s.orders > 0 ? format2dp((s.spend / s.sales) * 100) : "-"
+      }%`
+    );
+  });
+};
+
 //----- reset campaign bids
 
 const resetBids = (data, match) => {
@@ -1824,6 +1881,7 @@ const main = () => {
 
     case "--targets": {
       calcTargetStats(data, products);
+      calcCampaignStats(data, products);
 
       break;
     }
