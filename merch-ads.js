@@ -18,8 +18,8 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoMatchBid = 0.33;
-const maxAutoSubstituteComplementBid = 0.22;
+const maximumAutoMatchBid = 0.34;
+const maxAutoSubstituteComplementBid = 0.23;
 const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.2;
@@ -1129,7 +1129,7 @@ const lowerBidsOnLowSales = (data) => {
 
       if (k.keywordText) {
         console.log(
-          `High clicks, low sales - ${k.campaignNameInfo}, ${
+          `High clicks, low sales - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${
             k.productTargetingExpression || k.keywordText
           }, new bid ${k.bid}`
         );
@@ -1899,6 +1899,8 @@ const main = () => {
     }
 
     case "--all": {
+      calcCampaignStats(data, products);
+      calcTargetStats(data, products);
       createAutoKeywordPromotionCampaigns(data, sales);
       handleHighSpend(data);
       handlePerformers(data, products);
