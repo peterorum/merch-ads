@@ -18,8 +18,8 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoMatchBid = 0.34;
-const maxAutoSubstituteComplementBid = 0.23;
+const maximumAutoMatchBid = 0.35;
+const maxAutoSubstituteComplementBid = 0.24;
 const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.2;
@@ -32,6 +32,9 @@ const targetAcos = 25;
 const minAcosOrders = 1;
 // bid increase
 const goodAcosBonusFactor = 1.1;
+
+// products to not edit eg always goes to manual review
+const doNotEditProduct = /grammar/i;
 
 // one update per keyword
 let keywordIdsUpdated = [];
@@ -1129,9 +1132,9 @@ const lowerBidsOnLowSales = (data) => {
 
       if (k.keywordText) {
         console.log(
-          `High clicks, low sales - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${
-            k.productTargetingExpression || k.keywordText
-          }, new bid ${k.bid}`
+          `High clicks, low sales - ${k.campaignNameInfo}/${
+            k.adGroupNameInfo
+          }, ${k.productTargetingExpression || k.keywordText}, new bid ${k.bid}`
         );
       }
     }
@@ -1206,17 +1209,23 @@ const handlePerformers = (data, products) => {
 
           updatedBids = [...updatedBids, k];
 
-          let asin = data.find(
+          const campaign = data.find(
             (c) =>
               c.adGroupId === k.adGroupId &&
               c.entity === "Product Ad" &&
               c.state === "enabled" &&
               c.orders > 0
-          ).asin;
+          );
+
+          const asin = campaign.asin;
 
           const price = products.find((p) => p.asin === asin).price;
 
-          const msg = price < maxPrice ? "*** Over acos" : "Over acos";
+          const msg =
+            price < maxPrice &&
+            !doNotEditProduct.test(campaign.campaignNameInfo)
+              ? "*** Over acos"
+              : "Over acos";
 
           console.log(
             `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
@@ -1589,12 +1598,8 @@ const calcCampaignStats = (data) => {
   const stats = {};
 
   const targets = data.forEach((c) => {
-    if (
-      c.state === "enabled" &&
-      /(auto|test)$/i.test(c.campaignNameInfo)
-    ) {
-
-      const campaignType = /auto$/i.test(c.campaignNameInfo) ? 'auto' : 'test';
+    if (c.state === "enabled" && /(auto|test)$/i.test(c.campaignNameInfo)) {
+      const campaignType = /auto$/i.test(c.campaignNameInfo) ? "auto" : "test";
 
       let stat = stats[campaignType];
 
@@ -1617,9 +1622,7 @@ const calcCampaignStats = (data) => {
     }
   });
 
-  console.log(
-    "Type\timpr'ns\tclicks\tctr\tcpc\torders\tspend\tsales\t\tACOS"
-  );
+  console.log("Type\timpr'ns\tclicks\tctr\tcpc\torders\tspend\tsales\t\tACOS");
 
   Object.keys(stats).forEach((k) => {
     const s = stats[k];
