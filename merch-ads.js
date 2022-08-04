@@ -1064,6 +1064,7 @@ const raiseBidsOnLowImpressions = (data) => {
   let updatedBids = [];
 
   keywords.forEach((k) => {
+
     const newBid = increaseBid(
       k.bid || k.adGroupDefaultBidInfo,
       percentageIncrease,
