@@ -45,6 +45,9 @@ let resultsFile = 0;
 // avoid updating a bid more than once
 let recordsProcessed = [];
 
+// threshold for increasing bids on low impressions
+const fewImpressions = 50;
+
 // for ease of creating a new record using spread operator
 
 const blank = {
@@ -1028,7 +1031,6 @@ const raiseBidsOnLowImpressions = (data) => {
   // get older campaigns
 
   const oldCampaignAge = 6;
-  const fewImpressions = 50;
   const percentageIncrease = 10;
 
   const allCampaigns = data.filter(
@@ -1682,7 +1684,7 @@ const resetBids = (data, match) => {
 //----- reset auto bids to new max
 
 const resetMaxBids = (data) => {
-  // find targets with less than 2 orders over current max bid
+  // find targets with less than 1 order or many impressions over current max bid
   // restrict bid to lower of max bid or cpc
 
   let updatedBids = [];
@@ -1697,7 +1699,8 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
       (c.bid > getMaximumBid(c) || !!c.cpc) &&
-      c.orders < minAcosOrders
+      c.orders < minAcosOrders &&
+      c.impressions >= fewImpressions
   );
 
   autoTargets.forEach((k) => {
