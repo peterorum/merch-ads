@@ -11,15 +11,14 @@ const dataFile = "data/bulk.txt";
 const salesFile = "data/Sponsored Products Search term report.txt";
 const productFile = "data/productor-export.txt";
 
-const missingAsins = require("./data/missing-asins.json");
 const { ca } = require("date-fns/locale");
 
 // min & maximum allowable $bid
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoMatchBid = 0.35;
-const maxAutoSubstituteComplementBid = 0.24;
+const maximumAutoMatchBid = 0.36;
+const maxAutoSubstituteComplementBid = 0.25;
 const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.2;
@@ -802,14 +801,11 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           c.state === "enabled"
       );
 
-      const asin = productAd
-        ? productAd.asin
-        : (asin = missingAsins[co.campaignName]);
+      const asin = productAd.asin
 
       if (!asin) {
         // asin missing from Ad in bulk download for unknown reason
         console.log("No asin for", co.campaignName);
-        console.log("add to data/missing-asins.json");
         exit();
       }
 
