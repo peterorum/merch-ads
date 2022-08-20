@@ -49,6 +49,12 @@ let recordsProcessed = [];
 // threshold for increasing bids on low impressions
 const fewImpressions = 50;
 
+// negatives to ignore even if they sell
+const negativeExacts = fs
+  .readFileSync("data/negative/all.txt")
+  .toString()
+  .split("\n");
+
 // for ease of creating a new record using spread operator
 
 const blank = {
@@ -744,7 +750,8 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
       !/^b[a-z0-9]{9}$/.test(s.customerSearchTerm) &&
       s.customerSearchTerm.split(/ /).length <= 4 &&
       s.customerSearchTerm.split(/ /).length > 1 &&
-      /(shirt|apparel|gift)/gi.test(s.customerSearchTerm)
+      /(shirt|apparel|gift)/gi.test(s.customerSearchTerm) &&
+      !negativeExacts.find((x) => x === s.customerSearchTerm)
   );
 
   let newCampaigns = [];
