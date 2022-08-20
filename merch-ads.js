@@ -24,7 +24,7 @@ const maxAutoComplementBid = 0.2;
 const maxAutoProductBid = 0.2;
 const maximumTestBid = 0.4;
 
-const defaultAutoBid = 0.2;
+const defaultAutoBid = 0.3;
 const defaultTestBid = 0.4;
 
 const maxPrice = 18.99;
