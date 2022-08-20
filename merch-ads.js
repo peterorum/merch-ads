@@ -21,7 +21,6 @@ const maximumAutoCloseMatchBid = 0.38;
 const maximumAutoLooseMatchBid = 0.36;
 const maxAutoSubstituteBid = 0.4;
 const maxAutoComplementBid = 0.2;
-const maxAutoProductBid = 0.2;
 const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.3;
@@ -969,7 +968,7 @@ function getMaximumBid(campaign) {
 
       default: {
         // asin match
-        maximumBid = maxAutoProductBid;
+        maximumBid = maxAutoSubstituteBid;
         break;
       }
     }
