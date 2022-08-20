@@ -17,8 +17,11 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoMatchBid = 0.36;
-const maxAutoSubstituteComplementBid = 0.25;
+const maximumAutoCloseMatchBid = 0.38;
+const maximumAutoLooseMatchBid = 0.36;
+const maxAutoSubstituteBid = 0.4;
+const maxAutoComplementBid = 0.2;
+const maxAutoProductBid = 0.2;
 const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.2;
@@ -801,7 +804,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           c.state === "enabled"
       );
 
-      const asin = productAd.asin
+      const asin = productAd.asin;
 
       if (!asin) {
         // asin missing from Ad in bulk download for unknown reason
@@ -936,18 +939,40 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 };
 
 function getMaximumBid(campaign) {
-  let maximumBid = maximumAutoMatchBid;
+  let maximumBid = maximumAutoCloseMatchBid;
 
   if (/test$/i.test(campaign.campaignNameInfo)) {
     // test
     maximumBid = maximumTestBid;
-  } else if (
+  } else if (campaign.entity === "Product Targeting") {
     // auto
-    campaign.entity === "Product Targeting" &&
-    (campaign.productTargetingExpression === "substitutes" ||
-      campaign.productTargetingExpression === "complements")
-  ) {
-    maximumBid = maxAutoSubstituteComplementBid;
+    switch (campaign.productTargetingExpression) {
+      case "close-match": {
+        maximumBid = maximumAutoCloseMatchBid;
+        break;
+      }
+
+      case "loose-match": {
+        maximumBid = maximumAutoLooseMatchBid;
+        break;
+      }
+
+      case "substitutes": {
+        maximumBid = maxAutoSubstituteBid;
+        break;
+      }
+
+      case "complements": {
+        maximumBid = maxAutoComplementBid;
+        break;
+      }
+
+      default: {
+        // asin match
+        maximumBid = maxAutoProductBid;
+        break;
+      }
+    }
   }
 
   return maximumBid;
@@ -1023,8 +1048,9 @@ const addGeneralNegatives = (
 const raiseBidsOnLowImpressions = (data) => {
   // for campaigns 6 days or older
   // up bid on targets with low impressions by 10%
+  // or zero impressions for new campaigns
 
-  // get older campaigns
+  // get older campaigns or those with no impressions
 
   const oldCampaignAge = 6;
   const percentageIncrease = 10;
@@ -1035,6 +1061,7 @@ const raiseBidsOnLowImpressions = (data) => {
 
   const oldCampaigns = allCampaigns.filter(
     (c) =>
+      c.impressions === 0 ||
       differenceInDays(
         new Date(),
         parse(c.startDate, "yyyyMMdd", new Date())
@@ -1062,7 +1089,6 @@ const raiseBidsOnLowImpressions = (data) => {
   let updatedBids = [];
 
   keywords.forEach((k) => {
-
     const newBid = increaseBid(
       k.bid || k.adGroupDefaultBidInfo,
       percentageIncrease,
@@ -1543,15 +1569,15 @@ const calcTargetStats = (data) => {
   const stats = {};
 
   const targets = data.forEach((c) => {
-    if (
-      c.state === "enabled" &&
-      c.entity === "Product Targeting" &&
-      (c.productTargetingExpression === "close-match" ||
-        c.productTargetingExpression === "loose-match" ||
-        c.productTargetingExpression === "complements" ||
-        c.productTargetingExpression === "substitutes")
-    ) {
-      let stat = stats[c.productTargetingExpression];
+    if (c.state === "enabled" && c.entity === "Product Targeting") {
+      // close match etc or product asin
+      let target = c.productTargetingExpression;
+
+      if (/asin/gi.test(c.productTargetingExpression)) {
+        target = "product asin";
+      }
+
+      let stat = stats[target];
 
       if (!stat) {
         stat = {
@@ -1568,7 +1594,7 @@ const calcTargetStats = (data) => {
       stat.sales += c.sales;
       stat.spend += c.spend;
 
-      stats[c.productTargetingExpression] = stat;
+      stats[target] = stat;
     }
   });
 
