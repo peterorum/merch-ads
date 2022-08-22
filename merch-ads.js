@@ -18,7 +18,7 @@ const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
 const maximumAutoCloseMatchBid = 0.38;
-const maximumAutoLooseMatchBid = 0.36;
+const maximumAutoLooseMatchBid = 0.35;
 const maxAutoSubstituteBid = 0.4;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.4;
@@ -1263,7 +1263,7 @@ const handlePerformers = (data, products) => {
               : "Over acos";
 
           console.log(
-            `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
+            `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.keywordText}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
           );
         }
       }
@@ -1315,7 +1315,7 @@ const handleLowCtr = (data) => {
 
       updatedBids = [...updatedBids, k];
 
-      console.log(`Low ctr - ${k.campaignNameInfo}, new bid ${k.bid}`);
+      console.log(`Low ctr - ${k.campaignNameInfo}, ${k.keywordText}, new bid ${k.bid}`);
     }
   });
 
