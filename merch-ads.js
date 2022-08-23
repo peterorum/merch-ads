@@ -17,8 +17,8 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoCloseMatchBid = 0.38;
-const maximumAutoLooseMatchBid = 0.35;
+const maximumAutoCloseMatchBid = 0.39;
+const maximumAutoLooseMatchBid = 0.34;
 const maxAutoSubstituteBid = 0.4;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.4;
@@ -1359,7 +1359,7 @@ const handleHighSpend = (data) => {
       k.bid = newBid;
       updatedBids = [...updatedBids, k];
 
-      console.log(`High spend - ${k.campaignNameInfo}, new bid ${k.bid}`);
+      console.log(`High spend - ${k.campaignNameInfo}, ${k.keywordText || ""}, new bid ${k.bid}`);
       k.operation = "update";
     }
   });
