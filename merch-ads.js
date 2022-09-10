@@ -18,8 +18,8 @@ const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
 const maximumAutoCloseMatchBid = 0.39;
-const maximumAutoLooseMatchBid = 0.33;
-const maxAutoSubstituteBid = 0.4;
+const maximumAutoLooseMatchBid = 0.32;
+const maxAutoSubstituteBid = 0.39;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.4;
 
@@ -1325,7 +1325,7 @@ const handleLowCtr = (data) => {
 // lower bids on high spenders withot sales
 
 const handleHighSpend = (data) => {
-  const maxSpend = 4;
+  const maxSpend = 3;
   const percentageDecrease = 10;
 
   const allCampaigns = data.filter(
@@ -1359,7 +1359,7 @@ const handleHighSpend = (data) => {
       k.bid = newBid;
       updatedBids = [...updatedBids, k];
 
-      console.log(`High spend - ${k.campaignNameInfo}, ${k.keywordText || ""}, new bid ${k.bid}`);
+      console.log(`High spend - ${k.campaignNameInfo}, ${k.keywordText || k.productTargetingExpression}, new bid ${k.bid}`);
       k.operation = "update";
     }
   });
