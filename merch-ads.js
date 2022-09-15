@@ -17,11 +17,11 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoCloseMatchBid = 0.39;
-const maximumAutoLooseMatchBid = 0.32;
-const maxAutoSubstituteBid = 0.39;
+const maximumAutoCloseMatchBid = 0.4;
+const maximumAutoLooseMatchBid = 0.31;
+const maxAutoSubstituteBid = 0.38;
 const maxAutoComplementBid = 0.2;
-const maximumTestBid = 0.4;
+const maximumTestBid = 0.39;
 
 const defaultAutoBid = 0.3;
 const defaultTestBid = 0.4;
@@ -835,10 +835,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 
       if (!isExistingTestCampaign) {
         console.log(
-          "Create Test campaign - ",
-          baseCampaignName,
-          " - ",
-          co.customerSearchTerm
+          `Create Test campaign ${baseCampaignName}/${autoAdGroup.adGroupName}, ${co.customerSearchTerm}`
         );
 
         newTestCampaigns.push(baseCampaignName);
@@ -875,10 +872,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
           )
         ) {
           console.log(
-            "Update Test campaign - ",
-            baseCampaignName,
-            " - ",
-            co.customerSearchTerm
+            `Update Test campaign ${baseCampaignName}/${adGroupName}, ${co.customerSearchTerm}`
           );
 
           // default if new
@@ -1315,7 +1309,9 @@ const handleLowCtr = (data) => {
 
       updatedBids = [...updatedBids, k];
 
-      console.log(`Low ctr - ${k.campaignNameInfo}, ${k.keywordText}, new bid ${k.bid}`);
+      console.log(
+        `Low ctr - ${k.campaignNameInfo}, ${k.keywordText}, new bid ${k.bid}`
+      );
     }
   });
 
@@ -1359,7 +1355,11 @@ const handleHighSpend = (data) => {
       k.bid = newBid;
       updatedBids = [...updatedBids, k];
 
-      console.log(`High spend - ${k.campaignNameInfo}, ${k.keywordText || k.productTargetingExpression}, new bid ${k.bid}`);
+      console.log(
+        `High spend - ${k.campaignNameInfo}, ${k.adGroupNameInfo}, ${
+          k.keywordText || k.productTargetingExpression
+        }, new bid ${k.bid}`
+      );
       k.operation = "update";
     }
   });
