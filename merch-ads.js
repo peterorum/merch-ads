@@ -743,6 +743,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
 
   // ignore product orders, and keywords orders with more than 4 words or just 1
   // and must contain shirt or apparel etc
+  // and just letters
 
   let campaignsWithOrders = sales.filter(
     (s) =>
@@ -751,6 +752,7 @@ const createAutoKeywordPromotionCampaigns = (data, sales) => {
       s.customerSearchTerm.split(/ /).length <= 4 &&
       s.customerSearchTerm.split(/ /).length > 1 &&
       /(shirt|apparel|gift)/gi.test(s.customerSearchTerm) &&
+      /^[a-z\s]*$/gi.test(s.customerSearchTerm) &&
       !negativeExacts.find((x) => x === s.customerSearchTerm)
   );
 
