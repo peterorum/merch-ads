@@ -1075,6 +1075,7 @@ const raiseBidsOnLowImpressions = (data) => {
   const keywords = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.impressions < fewImpressions &&
       (!c.bid || c.bid < getMaximumBid(c)) &&
       oldCampaigns.find((oc) => oc.campaignId === c.campaignId) &&
@@ -1133,6 +1134,7 @@ const lowerBidsOnLowSales = (data) => {
   const keywords = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.bid > absoluteMinimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
@@ -1287,6 +1289,7 @@ const handleLowCtr = (data) => {
   const targets = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.bid > absoluteMinimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
@@ -1337,6 +1340,7 @@ const handleHighSpend = (data) => {
   const targets = data.filter(
     (c) =>
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.bid > absoluteMinimumBid &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
@@ -1446,10 +1450,8 @@ const listNoAds = (data, products) => {
   );
 
   const autoCampaigns = data.filter(
-    (d) =>
-      d.entity === "Campaign" &&
-      d.targetingType === "AUTO" &&
-      d.state === "enabled"
+    (d) => d.entity === "Campaign" && d.targetingType === "AUTO" // &&
+    // d.state === "enabled"
   );
 
   tshirts.forEach((p) => {
@@ -1546,6 +1548,7 @@ const listDupAds = (data, products) => {
           /auto$/i.test(c.campaignNameInfo) &&
           c.entity === "Product Ad" &&
           c.state === "enabled" &&
+          c.campaignStateInfo === "enabled" &&
           c.asin === p.asin
       );
 
@@ -1577,7 +1580,11 @@ const calcTargetStats = (data) => {
   const stats = {};
 
   const targets = data.forEach((c) => {
-    if (c.state === "enabled" && c.entity === "Product Targeting") {
+    if (
+      c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
+      c.entity === "Product Targeting"
+    ) {
       // close match etc or product asin
       let target = c.productTargetingExpression;
 
@@ -1635,7 +1642,11 @@ const calcCampaignStats = (data) => {
   const stats = {};
 
   const targets = data.forEach((c) => {
-    if (c.state === "enabled" && /(auto|test)$/i.test(c.campaignNameInfo)) {
+    if (
+      c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
+      /(auto|test)$/i.test(c.campaignNameInfo)
+    ) {
       const campaignType = /auto$/i.test(c.campaignNameInfo) ? "auto" : "test";
 
       let stat = stats[campaignType];
@@ -1692,6 +1703,7 @@ const resetBids = (data, match) => {
     (c) =>
       search.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
         // auto
@@ -1723,6 +1735,7 @@ const resetMaxBids = (data) => {
     (c) =>
       /auto$/i.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.entity === "Product Targeting" &&
       (c.productTargetingExpression === "close-match" ||
         c.productTargetingExpression === "loose-match" ||
@@ -1750,6 +1763,7 @@ const resetMaxBids = (data) => {
     (c) =>
       /test$/i.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.entity === "Keyword" &&
       (c.bid > maximumTestBid || !!c.cpc) &&
       c.orders < minAcosOrders
@@ -1786,6 +1800,7 @@ const addNegative = (data, match, term) => {
     (c) =>
       search.test(c.campaignNameInfo) &&
       c.state === "enabled" &&
+      c.campaignStateInfo === "enabled" &&
       c.targetingType === "AUTO"
   );
 
