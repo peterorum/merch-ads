@@ -18,7 +18,7 @@ const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
 const maximumAutoCloseMatchBid = 0.4;
-const maximumAutoLooseMatchBid = 0.31;
+const maximumAutoLooseMatchBid = 0.3;
 const maxAutoSubstituteBid = 0.38;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.39;
@@ -1224,7 +1224,7 @@ const handlePerformers = (data, products) => {
 
           if (/test$/i.test(k.campaignNameInfo)) {
             console.log(
-              `Under acos - ${k.campaignNameInfo}, ${k.acos}, ${
+              `Under acos - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.acos}, ${
                 k.keywordText || ""
               }, new bid ${k.bid}`
             );
