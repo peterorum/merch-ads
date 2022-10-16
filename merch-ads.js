@@ -10,6 +10,7 @@ const { utcToZonedTime, format } = require("date-fns-tz");
 const dataFile = "data/bulk.txt";
 const salesFile = "data/Sponsored Products Search term report.txt";
 const productFile = "data/productor-export.txt";
+const productsWithoutAdsFile = "data/no-ads.txt";
 
 const { ca } = require("date-fns/locale");
 
@@ -54,6 +55,12 @@ const negativeExacts = fs
   .readFileSync("data/negative/all.txt")
   .toString()
   .split("\n");
+
+// prodicuts which will not have ads running
+const productsWithoutAds = fs
+.readFileSync("data/no-ads.txt")
+.toString()
+.split("\n");
 
 // for ease of creating a new record using spread operator
 
@@ -1446,7 +1453,8 @@ const listNoAds = (data, products) => {
     (p) =>
       p.productType === "Standard T-Shirt" &&
       p.marketplace === "US" &&
-      p.status !== "Removed"
+      p.status !== "Removed" &&
+      ! productsWithoutAds.find(x => x == p.asin)
   );
 
   const autoCampaigns = data.filter(
