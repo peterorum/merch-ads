@@ -19,7 +19,7 @@ const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
 const maximumAutoCloseMatchBid = 0.4;
-const maximumAutoLooseMatchBid = 0.3;
+const maximumAutoLooseMatchBid = 0.29;
 const maxAutoSubstituteBid = 0.38;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.39;
@@ -36,7 +36,7 @@ const minAcosOrders = 1;
 const goodAcosBonusFactor = 1.1;
 
 // products to not edit eg always goes to manual review
-const doNotEditProduct = /grammar/i;
+const doNotEditProduct = /(grammar)|(pumpkin)/i;
 
 // one update per keyword
 let keywordIdsUpdated = [];
