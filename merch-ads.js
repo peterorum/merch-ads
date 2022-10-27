@@ -18,9 +18,9 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoCloseMatchBid = 0.4;
-const maximumAutoLooseMatchBid = 0.29;
-const maxAutoSubstituteBid = 0.38;
+const maximumAutoCloseMatchBid = 0.39;
+const maximumAutoLooseMatchBid = 0.28;
+const maxAutoSubstituteBid = 0.37;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.39;
 
@@ -1750,8 +1750,8 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
       (c.bid > getMaximumBid(c) || !!c.cpc) &&
-      c.orders < minAcosOrders &&
-      c.impressions >= fewImpressions
+      c.orders < minAcosOrders
+      // c.impressions >= fewImpressions
   );
 
   autoTargets.forEach((k) => {
