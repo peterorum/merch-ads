@@ -1710,8 +1710,8 @@ const resetBids = (data, match) => {
   const targets = data.filter(
     (c) =>
       search.test(c.campaignNameInfo) &&
-      c.state === "enabled" &&
-      c.campaignStateInfo === "enabled" &&
+      /(enabled|paused)/.test(c.state) &&
+      /(enabled|paused)/.test(c.campaignStateInfo) &&
       // keyword
       ((c.entity === "Keyword" && c.matchType === "broad") ||
         // auto
