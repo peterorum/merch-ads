@@ -18,9 +18,9 @@ const { ca } = require("date-fns/locale");
 const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
-const maximumAutoCloseMatchBid = 0.39;
-const maximumAutoLooseMatchBid = 0.27;
-const maxAutoSubstituteBid = 0.37;
+const maximumAutoCloseMatchBid = 0.38;
+const maximumAutoLooseMatchBid = 0.26;
+const maxAutoSubstituteBid = 0.36;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.39;
 
@@ -397,6 +397,7 @@ const loadProducts = () => {
         productType,
         marketplace,
         status,
+        created
       };
     });
 
@@ -1449,11 +1450,20 @@ const auditAds = (data, products) => {
 const listNoAds = (data, products) => {
   let noAds = [];
 
+  // just do recent t-shirts to ensure a new one wasn;t forgotten
+  // as old products may have haid ther camaign stopped
+
+  const recentPeriodDays = 31
+
   const tshirts = products.filter(
     (p) =>
       p.productType === "Standard T-Shirt" &&
       p.marketplace === "US" &&
       p.status !== "Removed" &&
+      differenceInDays(
+        new Date(),
+        parse(p.created, "MM/dd/yyyy h:mm a", new Date())
+      ) <= recentPeriodDays  &&
       ! productsWithoutAds.find(x => x == p.asin)
   );
 
