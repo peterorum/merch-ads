@@ -1759,15 +1759,17 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "loose-match" ||
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
-      (c.bid > getMaximumBid(c) || !!c.cpc) &&
-      c.orders < minAcosOrders
-      // c.impressions >= fewImpressions
+      (c.bid > getMaximumBid(c) || !!c.cpc)
+      // c.orders < minAcosOrders
   );
 
   autoTargets.forEach((k) => {
     const newBid = k.cpc ? Math.min(k.cpc, getMaximumBid(k)) : getMaximumBid(k);
 
     if (newBid !== k.bid) {
+
+      console.log(`${k.campaignNameInfo}/${k.adGroupNameInfo}/${k.productTargetingExpression} ${newBid}`);
+
       k.bid = newBid;
       k.operation = "update";
 
