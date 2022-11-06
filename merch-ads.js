@@ -1768,8 +1768,6 @@ const resetMaxBids = (data) => {
 
     if (newBid !== k.bid) {
 
-      console.log(`${k.campaignNameInfo}/${k.adGroupNameInfo}/${k.productTargetingExpression} ${newBid}`);
-
       k.bid = newBid;
       k.operation = "update";
 
