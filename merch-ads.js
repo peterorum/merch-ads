@@ -19,8 +19,8 @@ const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
 const maximumAutoCloseMatchBid = 0.38;
-const maximumAutoLooseMatchBid = 0.25;
-const maxAutoSubstituteBid = 0.35;
+const maximumAutoLooseMatchBid = 0.20;
+const maxAutoSubstituteBid = 0.34;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.40;
 
