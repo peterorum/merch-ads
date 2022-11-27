@@ -22,7 +22,7 @@ const maximumAutoCloseMatchBid = 0.38;
 const maximumAutoLooseMatchBid = 0.19;
 const maxAutoSubstituteBid = 0.33;
 const maxAutoComplementBid = 0.2;
-const maximumTestBid = 0.40;
+const maximumTestBid = 0.4;
 
 const defaultAutoBid = 0.3;
 const defaultTestBid = 0.4;
@@ -58,9 +58,9 @@ const negativeExacts = fs
 
 // prodicuts which will not have ads running
 const productsWithoutAds = fs
-.readFileSync("data/no-ads.txt")
-.toString()
-.split("\n");
+  .readFileSync("data/no-ads.txt")
+  .toString()
+  .split("\n");
 
 // for ease of creating a new record using spread operator
 
@@ -397,7 +397,7 @@ const loadProducts = () => {
         productType,
         marketplace,
         status,
-        created
+        created,
       };
     });
 
@@ -1222,21 +1222,22 @@ const handlePerformers = (data, products) => {
         ? goodAcosBonusFactor
         : 1;
 
-      if (!k.bid || k.bid < Math.max(k.cpc, getMaximumBid(k)) * acosFactor) {
-        const newBid = increaseBid(k.bid, percentageChange, k, acosFactor);
+      const newBid = increaseBid(k.bid, percentageChange, k, acosFactor);
 
-        if (newBid !== k.bid) {
-          k.bid = newBid;
+      if (!k.bid || k.bid !== newBid) {
 
-          updatedBids = [...updatedBids, k];
+        const oldBid = k.bid;
 
-          if (/test$/i.test(k.campaignNameInfo)) {
-            console.log(
-              `Under acos - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.acos}, ${
-                k.keywordText || ""
-              }, new bid ${k.bid}`
-            );
-          }
+        k.bid = newBid;
+
+        updatedBids = [...updatedBids, k];
+
+        if (/test$/i.test(k.campaignNameInfo)) {
+          console.log(
+            `Under acos - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${
+              k.acos
+            }, ${k.keywordText || ""}, bid ${oldBid} -> ${k.bid}`
+          );
         }
       }
     } else {
@@ -1246,6 +1247,8 @@ const handlePerformers = (data, products) => {
         const newBid = decreaseBid(k.bid, percentageChange, k);
 
         if (newBid !== k.bid) {
+          const oldBid = k.bid;
+
           k.bid = newBid;
 
           updatedBids = [...updatedBids, k];
@@ -1269,7 +1272,7 @@ const handlePerformers = (data, products) => {
               : "Over acos";
 
           console.log(
-            `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.keywordText}, ${k.acos}, ${asin}, $${price}, new bid ${k.bid}`
+            `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.keywordText}, ${k.acos}, ${asin}, $${price}, bid ${oldBid} -> ${k.bid}`
           );
         }
       }
@@ -1453,7 +1456,7 @@ const listNoAds = (data, products) => {
   // just do recent t-shirts to ensure a new one wasn;t forgotten
   // as old products may have haid ther camaign stopped
 
-  const recentPeriodDays = 31
+  const recentPeriodDays = 31;
 
   const tshirts = products.filter(
     (p) =>
@@ -1463,8 +1466,8 @@ const listNoAds = (data, products) => {
       differenceInDays(
         new Date(),
         parse(p.created, "MM/dd/yyyy h:mm a", new Date())
-      ) <= recentPeriodDays  &&
-      ! productsWithoutAds.find(x => x == p.asin)
+      ) <= recentPeriodDays &&
+      !productsWithoutAds.find((x) => x == p.asin)
   );
 
   const autoCampaigns = data.filter(
@@ -1760,14 +1763,13 @@ const resetMaxBids = (data) => {
         c.productTargetingExpression === "complements" ||
         c.productTargetingExpression === "substitutes") &&
       (c.bid > getMaximumBid(c) || !!c.cpc)
-      // c.orders < minAcosOrders
+    // c.orders < minAcosOrders
   );
 
   autoTargets.forEach((k) => {
     const newBid = k.cpc ? Math.min(k.cpc, getMaximumBid(k)) : getMaximumBid(k);
 
     if (newBid !== k.bid) {
-
       k.bid = newBid;
       k.operation = "update";
 
