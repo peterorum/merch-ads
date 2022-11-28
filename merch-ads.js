@@ -27,6 +27,8 @@ const maximumTestBid = 0.4;
 const defaultAutoBid = 0.3;
 const defaultTestBid = 0.4;
 
+const maxPlacementPercentage = 20;
+
 const maxPrice = 18.99;
 
 // ACOS
@@ -236,6 +238,7 @@ const loadData = () => {
       spend: d.spend ? parseFloat(d.spend) : d.spend,
       sales: d.sales ? parseFloat(d.sales) : d.sales,
       cpc: d.cpc ? parseFloat(d.cpc) : d.cpc,
+      percentage: d.percentage ? parseFloat(d.percentage) : d.percentage,
       acos: d.acos ? parseFloat(d.acos.replace(/\%/, "")) : d.acos,
       adGroupDefaultBidInfo: d.adGroupDefaultBidInfo
         ? parseFloat(d.adGroupDefaultBidInfo)
@@ -1225,7 +1228,6 @@ const handlePerformers = (data, products) => {
       const newBid = increaseBid(k.bid, percentageChange, k, acosFactor);
 
       if (!k.bid || k.bid !== newBid) {
-
         const oldBid = k.bid;
 
         k.bid = newBid;
@@ -1275,6 +1277,52 @@ const handlePerformers = (data, products) => {
             `${msg} - ${k.campaignNameInfo}/${k.adGroupNameInfo}, ${k.keywordText}, ${k.acos}, ${asin}, $${price}, bid ${oldBid} -> ${k.bid}`
           );
         }
+      }
+    }
+  });
+
+  outputRecords(updatedBids);
+};
+
+//----------- raise bids on placement with good ACOS
+
+const adjustPlacements = (data) => {
+  let updatedBids = [];
+
+  const targets = data.forEach((c) => {
+    if (
+      c.campaignStateInfo === "enabled" &&
+      c.entity === "Bidding Adjustment" &&
+      c.orders > 0
+    ) {
+      // placementProductPage, placementTop
+
+      let target = c.placement;
+
+      const oldPercentage = c.percentage;
+
+      if (c.acos <= targetAcos) {
+        if (!c.percentage) {
+          c.percentage = 0;
+        }
+
+        c.percentage = Math.round(
+          (maxPlacementPercentage * (targetAcos - c.acos)) / targetAcos
+        );
+
+        if (c.percentage !== oldPercentage) {
+          console.log(
+            `Placement ${c.campaignNameInfo}/${c.placement} ACOS ${c.acos} percentage ${oldPercentage} -> ${c.percentage}`
+          );
+        }
+      } else {
+        c.percentage = 0;
+      }
+
+      if (c.percentage !== oldPercentage) {
+        c.operation = "update";
+
+        updatedBids = [...updatedBids, c];
       }
     }
   });
@@ -1691,7 +1739,7 @@ const calcCampaignStats = (data) => {
     }
   });
 
-  console.log("Type\timpr'ns\tclicks\tctr\tcpc\torders\tspend\tsales\t\tACOS");
+  console.log("Type\timpr'ns\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS");
 
   Object.keys(stats).forEach((k) => {
     const s = stats[k];
@@ -1699,9 +1747,63 @@ const calcCampaignStats = (data) => {
     console.log(
       `${k}\t${s.impressions}\t${s.clicks}\t${format2dp(
         (s.clicks / s.impressions) * 100
-      )}%\t$${format2dp(s.spend / s.clicks)}\t${s.orders}\t$${format2dp(
+      )}%\t$${format2dp(s.spend / s.clicks)}\t${s.orders}\t$${Math.floor(
         s.spend
-      )}\t$${format2dp(s.sales)}\t${
+      )}\t$${Math.floor(s.sales)}\t${
+        s.orders > 0 ? format2dp((s.spend / s.sales) * 100) : "-"
+      }%`
+    );
+  });
+};
+
+//--- calc placement stats - top of page etc
+
+const calcPlacementStats = (data) => {
+  const stats = {};
+
+  const targets = data.forEach((c) => {
+    if (
+      c.campaignStateInfo === "enabled" &&
+      c.entity === "Bidding Adjustment"
+    ) {
+      // placementProductPage, placementTop
+
+      let target = c.placement;
+
+      let stat = stats[target];
+
+      if (!stat) {
+        stat = {
+          impressions: 0,
+          clicks: 0,
+          orders: 0,
+          sales: 0,
+          spend: 0,
+        };
+      }
+      stat.impressions += c.impressions;
+      stat.clicks += c.clicks;
+      stat.orders += c.orders;
+      stat.sales += c.sales;
+      stat.spend += c.spend;
+
+      stats[target] = stat;
+    }
+  });
+
+  console.log(
+    "Placement\timprns\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS"
+  );
+
+  Object.keys(stats).forEach((k) => {
+    const s = stats[k];
+
+    console.log(
+      `${k.replace(/placementProductPage/, "ProductPage")}\t${s.impressions}\t${
+        s.clicks
+      }\t${format2dp((s.clicks / s.impressions) * 100)}%\t$${format2dp(
+        s.spend / s.clicks
+      )}\t${s.orders}\t$${format2dp(s.spend)}\t$${format2dp(s.sales)}\t${
         s.orders > 0 ? format2dp((s.spend / s.sales) * 100) : "-"
       }%`
     );
@@ -1958,6 +2060,13 @@ const main = () => {
     case "--targets": {
       calcTargetStats(data, products);
       calcCampaignStats(data, products);
+      calcPlacementStats(data, products);
+
+      break;
+    }
+
+    case "--placements": {
+      adjustPlacements(data);
 
       break;
     }
@@ -1983,6 +2092,7 @@ const main = () => {
       lowerBidsOnLowSales(data);
       handleLowCtr(data);
       raiseBidsOnLowImpressions(data);
+      adjustPlacements(data);
       resetMaxBids(data);
       auditAds(data, products);
 
@@ -1998,6 +2108,7 @@ const main = () => {
       console.log("--performers\t\tAdjust bids based on ACOS");
       console.log("--lowctr\t\tReduce bids on low CTR");
       console.log("--highspend\t\tReduce bids on high spend");
+      console.log("--placements\t\tupdate placements with good ACOS");
       console.log("--maxbids\t\tReset any over the current max auto bid");
       console.log(
         '--reset "^(halloween|xmas)"\t\tSet to min bid on campaign match'
