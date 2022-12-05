@@ -1443,8 +1443,8 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 5.0;
-  const purgeImpressions = 1500;
+  const purgeSpend = 2.0;
+  const purgeImpressions = 1000;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
@@ -1452,12 +1452,14 @@ const listPurgeable = (data, products) => {
   autoCampaigns.forEach((ac) => {
     const baseCampaignName = ac.campaignName.replace(/ Auto$/, "");
 
-    let asin = data.find(
+    const asinAd = data.find(
       (c) =>
         c.campaignId === ac.campaignId &&
         c.entity === "Product Ad" &&
         c.state === "enabled"
-    ).asin;
+    );
+
+    let asin = asinAd.asin;
 
     const product = products.find((p) => p.asin === asin);
 
@@ -1470,8 +1472,8 @@ const listPurgeable = (data, products) => {
         spend: 0,
       };
 
-      record.impressions += ac.impressions;
-      record.spend += ac.spend;
+      record.impressions += asinAd.impressions;
+      record.spend += asinAd.spend;
 
       stats[asin] = record;
     }
