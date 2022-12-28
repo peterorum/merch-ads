@@ -1444,7 +1444,7 @@ const listPurgeable = (data, products) => {
   );
 
   const purgeSpend = 2.0;
-  const purgeImpressions = 1000;
+  const purgeImpressions = 2000;
 
   // keyed by campaign stem (redundant if only using auto)
   const stats = {};
