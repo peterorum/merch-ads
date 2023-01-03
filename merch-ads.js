@@ -10,7 +10,6 @@ const { utcToZonedTime, format } = require("date-fns-tz");
 const dataFile = "data/bulk.txt";
 const salesFile = "data/Sponsored Products Search term report.txt";
 const productFile = "data/productor-export.txt";
-const productsWithoutAdsFile = "data/no-ads.txt";
 
 const { ca } = require("date-fns/locale");
 
@@ -1770,7 +1769,7 @@ const calcPlacementStats = (data) => {
     ) {
       // placementProductPage, placementTop
 
-      let target = c.placement;
+      let target = `${c.placement} ${/auto$/gi.test(c.campaignNameInfo) ? ' Auto' : ' Test'}`;
 
       let stat = stats[target];
 
@@ -1794,7 +1793,7 @@ const calcPlacementStats = (data) => {
   });
 
   console.log(
-    "Placement\timprns\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS"
+    "Placement\t\timprns\tclicks\tctr\tcpc\torders\tspend\tsales\tACOS"
   );
 
   Object.keys(stats).forEach((k) => {
@@ -2088,6 +2087,7 @@ const main = () => {
     case "--all": {
       calcCampaignStats(data, products);
       calcTargetStats(data, products);
+      calcPlacementStats(data);
       createAutoKeywordPromotionCampaigns(data, sales);
       handleHighSpend(data);
       handlePerformers(data, products);
