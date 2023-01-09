@@ -26,7 +26,16 @@ const maximumTestBid = 0.4;
 const defaultAutoBid = 0.3;
 const defaultTestBid = 0.4;
 
-const maxPlacementPercentage = 20;
+const maxPlacementPercentage = {
+  auto: {
+    placementTop: 30,
+    placementProductPage: 10,
+  },
+  test: {
+    placementTop: 10,
+    placementProductPage: 15,
+  },
+};
 
 const maxPrice = 18.99;
 
@@ -1305,8 +1314,10 @@ const adjustPlacements = (data) => {
           c.percentage = 0;
         }
 
+        const maxPercentage = maxPlacementPercentage[/test$/i.test(c.campaignNameInfo) ? 'test' : 'auto'][c.placement] || 0;
+
         c.percentage = Math.round(
-          (maxPlacementPercentage * (targetAcos - c.acos)) / targetAcos
+          (maxPercentage * (targetAcos - c.acos)) / targetAcos
         );
 
         if (c.percentage !== oldPercentage) {
@@ -1442,7 +1453,7 @@ const listPurgeable = (data, products) => {
       d.orders === 0 // no orders (may have orders but no sales in productor if order led to sale of related product)
   );
 
-  const purgeSpend = 2.0;
+  const purgeSpend = 3.0;
   const purgeImpressions = 2000;
 
   // keyed by campaign stem (redundant if only using auto)
@@ -1502,9 +1513,10 @@ const auditAds = (data, products) => {
 const listNoAds = (data, products) => {
   let noAds = [];
 
-  // just do recent t-shirts to ensure a new one wasn;t forgotten
+  // just do recent t-shirts to ensure a new one wasn't forgotten
   // as old products may have haid ther camaign stopped
 
+  const daysToStartAds = 4;
   const recentPeriodDays = 31;
 
   const tshirts = products.filter(
@@ -1512,6 +1524,10 @@ const listNoAds = (data, products) => {
       p.productType === "Standard T-Shirt" &&
       p.marketplace === "US" &&
       p.status !== "Removed" &&
+      differenceInDays(
+        new Date(),
+        parse(p.created, "MM/dd/yyyy h:mm a", new Date())
+      ) >= daysToStartAds &&
       differenceInDays(
         new Date(),
         parse(p.created, "MM/dd/yyyy h:mm a", new Date())
@@ -1554,18 +1570,17 @@ const listNoAds = (data, products) => {
 const listNoProducts = (data, products) => {
   let noProducts = [];
 
-  const tshirts = products.filter(
-    (p) =>
-      p.productType === "Standard T-Shirt" &&
-      p.marketplace === "US" &&
-      p.status !== "Removed"
-  );
+  const daysToStartAds = 4;
 
   const autoCampaigns = data.filter(
     (d) =>
       d.entity === "Campaign" &&
       d.targetingType === "AUTO" &&
-      d.state === "enabled"
+      d.state === "enabled" &&
+      differenceInDays(
+        new Date(),
+        parse(d.startDate, "MM/dd/yyyy h:mm a", new Date())
+      ) >= daysToStartAds
   );
 
   const autoAdGroups = data.filter(
@@ -1769,7 +1784,9 @@ const calcPlacementStats = (data) => {
     ) {
       // placementProductPage, placementTop
 
-      let target = `${c.placement} ${/auto$/gi.test(c.campaignNameInfo) ? ' Auto' : ' Test'}`;
+      let target = `${c.placement} ${
+        /auto$/gi.test(c.campaignNameInfo) ? " Auto" : " Test"
+      }`;
 
       let stat = stats[target];
 
