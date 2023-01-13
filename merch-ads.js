@@ -18,8 +18,8 @@ const absoluteMinimumBid = 0.02;
 const absoluteMaximumBid = 1;
 
 const maximumAutoCloseMatchBid = 0.38;
-const maximumAutoLooseMatchBid = 0.18;
-const maxAutoSubstituteBid = 0.32;
+const maximumAutoLooseMatchBid = 0.20;
+const maxAutoSubstituteBid = 0.30;
 const maxAutoComplementBid = 0.2;
 const maximumTestBid = 0.4;
 
@@ -28,12 +28,12 @@ const defaultTestBid = 0.4;
 
 const maxPlacementPercentage = {
   auto: {
-    placementTop: 30,
-    placementProductPage: 10,
+    placementTop: 40,
+    placementProductPage: 9,
   },
   test: {
-    placementTop: 10,
-    placementProductPage: 15,
+    placementTop: 9,
+    placementProductPage: 9,
   },
 };
 
@@ -2114,6 +2114,8 @@ const main = () => {
       adjustPlacements(data);
       resetMaxBids(data);
       auditAds(data, products);
+      listPurgeable(data, products);
+
 
       break;
     }
